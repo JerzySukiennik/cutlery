@@ -137,6 +137,18 @@ export class Builder {
     return r;
   }
 
+  mini(x, y, z, s, fn) {
+    const gr = new THREE.Group();
+    gr.position.set(x, y, z);
+    gr.scale.setScalar(s);
+    (this.target || this.statics).add(gr);
+    const pt = this.target, pc = this.nocol;
+    this.target = gr; this.nocol = true;
+    fn(this);
+    this.target = pt; this.nocol = pc;
+    return gr;
+  }
+
   col(x, y, w, h, mat, extra = {}) {
     if (this.capture || this.nocol) return null;
     const c = { x, y, w, h, mat, ...extra };
@@ -145,7 +157,7 @@ export class Builder {
   }
 
   add(obj, dynamic = false) {
-    (dynamic || this.capture ? this.root : this.statics).add(obj);
+    (this.target || (dynamic || this.capture ? this.root : this.statics)).add(obj);
     return obj;
   }
 

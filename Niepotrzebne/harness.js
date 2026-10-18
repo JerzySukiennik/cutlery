@@ -67,3 +67,24 @@ window.climb = (kind, dir, targetY, maxT = 8, over = 0) => {
   }
   return [kind, +c.pos.x.toFixed(2), +c.pos.y.toFixed(2), c.state];
 };
+
+window.hsim = (sec, f) => {
+  const n = Math.round(sec * 60);
+  for (let i = 0; i < n; i++) {
+    const r = f ? f(i / 60, i) : {};
+    game.fixed(1 / 60, Object.assign(base(), r));
+  }
+  const me = game.active;
+  return me ? [me.kind, +me.pos.x.toFixed(2), +me.pos.y.toFixed(2), me.state] : null;
+};
+
+window.hshot = (n = 40) => {
+  const g = game, w = g.world;
+  for (let i = 0; i < n; i++) {
+    w.frame(1 / 60, 1);
+    if (g.hub) g.hub.frame(1 / 60);
+    w.updateCamera(1 / 60, g.active, i === 0 && !g.active);
+    g.renderer.render(1 / 60);
+  }
+  return 'ok';
+};

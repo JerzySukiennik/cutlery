@@ -1,4 +1,4 @@
-// UI: menu, chapter picker, online lobby, pause, HUD, hints, title cards, fades and touch controls.
+// UI: house entry and character pick, pause, HUD, hints, title cards, end cards, fades and touch controls.
 export const TRACKS = [
   { id: 'b', name: 'Butter', players: 1, chars: ['butter'], note: 'one player' },
   { id: 'd', name: 'Fork & Knife', players: 2, chars: ['fork', 'knife'], note: 'two players' },
@@ -20,6 +20,12 @@ export const CHAPTERS = [
 export const trackOf = (id) => TRACKS.find((t) => t.id === String(id)[0]);
 export const chapterOf = (id) => CHAPTERS.find((c) => c.id === id);
 export const nextChapter = (id) => { const i = CHAPTERS.findIndex((c) => c.id === id); const n = CHAPTERS[i + 1]; return n && n.track === CHAPTERS[i].track ? n : null; };
+export function unlockedIn(done, id, all = false) {
+  const i = CHAPTERS.findIndex((c) => c.id === id);
+  if (i < 0) return false;
+  const c = CHAPTERS[i], prev = CHAPTERS[i - 1];
+  return !prev || prev.track !== c.track || done.has(prev.id) || all;
+}
 
 export const GLYPH = {
   fork: `<svg viewBox="0 0 24 48" aria-hidden="true"><path d="M12 47c3 0 4-2 4-4l-1-14c0-4-1-7-1-9 0-2 4-3 4-6V3h-2v10h-1.6V3h-1.8v10h-1.2V3H9.6v10H8V3H6v11c0 3 4 4 4 6 0 2-1 5-1 9L8 43c0 2 1 4 4 4z" fill="currentColor"/></svg>`,
@@ -28,6 +34,8 @@ export const GLYPH = {
 };
 
 const NAMES = { fork: 'Fork', knife: 'Knife', butter: 'Butter' };
+const ABOUT = { fork: 'Stabs, climbs and carries.', knife: 'Cuts, and sticks into wood.', butter: 'Hardens, melts and floats.' };
+const ALL = new URLSearchParams(location.search).has('all');
 
 const $ = (s, r = document) => r.querySelector(s);
 
@@ -35,7 +43,6 @@ export class UI {
   constructor(game) {
     this.g = game;
     this.menu = $('#menu');
-    this.lobby = $('#lobby');
     this.pause = $('#pause');
     this.hud = $('#hud');
     this.hintEl = $('#hint');
@@ -48,7 +55,9 @@ export class UI {
     const legacy = { 1: 'b1', 2: 'd1', 3: 't1' };
     try { for (const x of JSON.parse(localStorage.getItem('cutlery.done') || '[]')) this.done.add(legacy[x] || x); } catch (e) {}
     this.nick = '';
-    try { this.nick = localStorage.getItem('cutlery.nick') || ''; } catch (e) {}
+    this.kind = '';
+    try { this.nick = localStorage.getItem('cutlery.nick') || ''; this.kind = localStorage.getItem('cutlery.kind') || ''; } catch (e) {}
+    if (!NAMES[this.kind]) this.kind = '';
     this.hintT = 0;
   }
 
@@ -60,99 +69,72 @@ export class UI {
 
   hideLoading() { this.loading.classList.remove('show'); }
 
-  show(el) { for (const s of [this.menu, this.lobby, this.pause]) s.classList.toggle('show', s === el); }
+  show(el) { for (const s of [this.menu, this.pause]) s.classList.toggle('show', s === el); }
   hideAll() { this.show(null); }
 
-  unlocked(id) {
-    const i = CHAPTERS.findIndex((c) => c.id === id);
-    if (i < 0) return false;
-    const c = CHAPTERS[i], prev = CHAPTERS[i - 1];
-    return !prev || prev.track !== c.track || this.done.has(prev.id) || new URLSearchParams(location.search).has('all');
-  }
+  unlocked(id) { return unlockedIn(this.done, id, ALL); }
 
   markDone(id) {
     this.done.add(id);
     try { localStorage.setItem('cutlery.done', JSON.stringify([...this.done])); } catch (e) {}
   }
 
-  showMenu(focus = null) {
+  showEntry() {
     const g = this.g;
-    const chapters = TRACKS.map((t) => `
-      <section class="track">
-        <h3 class="track-head"><span class="track-glyphs">${t.chars.map((k) => `<i class="gl gl-${k}" title="${NAMES[k]}">${GLYPH[k]}</i>`).join('')}</span>${t.name}<em>${t.note}</em></h3>
-        ${CHAPTERS.filter((c) => c.track === t.id).map((c) => {
-          const open = this.unlocked(c.id);
-          const prev = CHAPTERS[CHAPTERS.indexOf(c) - 1];
-          return `<button class="chap ${this.done.has(c.id) ? 'done' : ''} ${open ? '' : 'locked'}" data-ch="${c.id}" ${open ? '' : 'aria-disabled="true"'}>
-            <span class="chap-num">${c.num}</span>
-            <span class="chap-body"><span class="chap-title">${c.title}</span><span class="chap-sub">${open ? c.sub : `Finish ${prev ? prev.title : 'the chapter before'} to open.`}</span></span>
-          </button>`;
-        }).join('')}
-      </section>`).join('');
+    let pick = this.kind || 'butter';
     this.menu.innerHTML = `
       <div class="menu-wrap">
         <header class="brand">
           <h1>Cutlery</h1>
           <p>One house, one day, three of them</p>
         </header>
-        <nav class="chapters">${chapters}</nav>
+        <section class="entry">
+          <p class="eyebrow">Who are you today?</p>
+          <div class="picks">${['fork', 'knife', 'butter'].map((k) => `<button class="pick ${k === pick ? 'mine' : ''}" data-k="${k}"><i class="gl gl-${k}">${GLYPH[k]}</i><b>${NAMES[k]}</b><span>${ABOUT[k]}</span></button>`).join('')}</div>
+          <label class="field"><span>Your name</span><input id="nick" maxlength="20" placeholder="Name" value="${escapeHtml(this.nick)}" autocomplete="off" spellcheck="false"></label>
+          <button class="btn primary" data-act="enter">Enter the house</button>
+          <p class="muted small entry-note">Every floor is one story. Butter's floor is for one player, Fork and Knife's for two, the top floor for all three, each on their own device. Stand on a portal to begin.</p>
+          <p class="house-count" id="houseCount"></p>
+        </section>
         <div class="menu-side" id="side"></div>
         <footer class="menu-foot">
           <button class="link" data-act="settings">Settings</button>
           <button class="link" data-act="controls">Controls</button>
-          <button class="link" data-act="join">Join a room</button>
         </footer>
       </div>`;
     this.show(this.menu);
-    this.menu.querySelectorAll('.chap').forEach((b) => {
-      b.addEventListener('click', () => {
-        if (b.classList.contains('locked')) { g.audio.ui('ui_back'); b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; }
-        g.audio.ui('ui_select'); this.pickChapter(b.dataset.ch);
-      });
+    this.houseCount(g.hub ? g.hub.count() : 0);
+    const nick = $('#nick', this.menu);
+    this.menu.querySelectorAll('.pick').forEach((b) => {
+      b.onclick = () => { pick = b.dataset.k; g.audio.ui('ui_toggle'); this.menu.querySelectorAll('.pick').forEach((x) => x.classList.toggle('mine', x === b)); };
       b.addEventListener('pointerenter', () => g.audio.ui('ui_click'));
     });
-    this.menu.querySelector('[data-act=settings]').onclick = () => { g.audio.ui('ui_open'); this.side('settings'); };
-    this.menu.querySelector('[data-act=controls]').onclick = () => { g.audio.ui('ui_open'); this.side('controls'); };
-    this.menu.querySelector('[data-act=join]').onclick = () => { g.audio.ui('ui_open'); this.side('join'); };
-    if (focus) this.pickChapter(focus);
+    const enter = () => { this.setNick(nick.value); this.setKind(pick); g.audio.ui('ui_select'); g.enterHub(pick); };
+    nick.addEventListener('keydown', (e) => { if (e.key === 'Enter') enter(); e.stopPropagation(); });
+    $('[data-act=enter]', this.menu).onclick = enter;
+    $('[data-act=settings]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('settings'); };
+    $('[data-act=controls]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('controls'); };
   }
 
-  side(kind, data) {
-    const el = $('#side', this.menu);
+  houseCount(n) {
+    const g = this.g;
+    const others = g.hub ? g.hub.kinds() : [];
+    const txt = n <= 0 || (n === 1 && g.hub && g.hub.me) ? (g.hub && g.hub.online ? 'Nobody else is in the house right now.' : '') : `${n} in the house right now${others.length ? ': ' + others.map((k) => NAMES[k]).join(', ') : ''}.`;
+    const el = $('#houseCount', this.menu);
+    if (el) el.textContent = txt;
+    const hc = $('.hud-room', this.hud);
+    if (hc && g.chapter === 'hub') hc.textContent = n > 1 ? `${n} in the house` : '';
+  }
+
+  setKind(k) {
+    this.kind = k;
+    try { localStorage.setItem('cutlery.kind', k); } catch (e) {}
+  }
+
+  side(kind, data, target) {
+    const el = target || $('#side', this.menu);
     if (!el) return;
-    this.menu.querySelectorAll('.chap').forEach((b) => b.classList.toggle('on', kind === 'chapter' && b.dataset.ch === data));
-    if (kind === 'chapter') {
-      const c = { ...chapterOf(data), ...trackOf(data), id: data };
-      if (c.players === 1) {
-        el.innerHTML = `<div class="panel"><h2>${c.title}</h2><p class="muted">${c.sub}</p><button class="btn primary" data-go="solo">Begin</button></div>`;
-      } else {
-        el.innerHTML = `<div class="panel"><h2>${c.title}</h2><p class="muted">${c.sub} Made for ${c.players} players online, each on their own device.</p>
-          <label class="field"><span>Your name</span><input id="nick" maxlength="20" placeholder="Name" value="${escapeHtml(this.nick)}"></label>
-          <button class="btn primary" data-go="host">Host a room</button>
-          <button class="btn" data-go="joinpanel">Join with a code</button>
-          <button class="btn quiet" data-go="solo">Play alone, switching with Tab</button></div>`;
-      }
-      el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => {
-        const n = $('#nick', el);
-        if (n) this.setNick(n.value);
-        this.g.audio.ui('ui_select');
-        const go = b.dataset.go;
-        if (go === 'solo') this.g.startSolo(data);
-        else if (go === 'host') this.g.hostRoom(data);
-        else this.side('join');
-      });
-    } else if (kind === 'join') {
-      el.innerHTML = `<div class="panel"><h2>Join a room</h2><p class="muted">Ask the host for the four-letter code.</p>
-        <label class="field"><span>Your name</span><input id="nick" maxlength="20" placeholder="Name" value="${escapeHtml(this.nick)}"></label>
-        <label class="field"><span>Room code</span><input id="code" class="code-in" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
-        <button class="btn primary" data-go="join">Join</button><p class="err" id="joinErr"></p></div>`;
-      const code = $('#code', el);
-      code.focus();
-      code.addEventListener('input', () => { code.value = code.value.toUpperCase().replace(/[^A-Z]/g, ''); });
-      const go = () => { this.setNick($('#nick', el).value); this.g.audio.ui('ui_select'); this.g.joinRoom(code.value); };
-      code.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-      $('[data-go=join]', el).onclick = go;
-    } else if (kind === 'settings') {
+    if (kind === 'settings') {
       const a = this.g.audio.vol, q = this.g.renderer.quality;
       el.innerHTML = `<div class="panel"><h2>Settings</h2>
         ${['master', 'music', 'sfx'].map((k) => `<label class="field range"><span>${k === 'sfx' ? 'Sounds' : k[0].toUpperCase() + k.slice(1)}</span><input type="range" min="0" max="1" step="0.05" value="${a[k]}" data-vol="${k}"></label>`).join('')}
@@ -181,88 +163,55 @@ export class UI {
     </dl>`;
   }
 
-  pickChapter(id) { this.side('chapter', id); }
-
   setNick(v) {
     this.nick = String(v || '').trim().slice(0, 20);
     try { localStorage.setItem('cutlery.nick', this.nick); } catch (e) {}
   }
 
-  showLobby(net, chapter) {
-    const c = { ...chapterOf(chapter), ...trackOf(chapter) };
-    const players = net.players || {};
-    const me = net.uid;
-    const owners = {};
-    for (const [u, p] of Object.entries(players)) if (p.char) owners[p.char] = u;
-    const cards = c.chars.map((k) => {
-      const u = owners[k];
-      const p = u ? players[u] : null;
-      const mine = u === me;
-      return `<button class="pick ${mine ? 'mine' : ''} ${u && !mine ? 'taken' : ''}" data-k="${k}">
-        <i class="gl gl-${k}">${GLYPH[k]}</i><b>${NAMES[k]}</b><span>${p ? escapeHtml(p.nick) + (mine ? ' (you)' : '') : 'open'}</span></button>`;
-    }).join('');
-    const list = Object.entries(players).map(([u, p]) => `<li>${escapeHtml(p.nick)}${u === net.meta.host ? ' <em>host</em>' : ''}${u === me ? ' <em>you</em>' : ''}</li>`).join('');
-    const host = net.isHost;
-    this.lobby.innerHTML = `
-      <div class="lobby-wrap">
-        <p class="eyebrow">${c.name} · Chapter ${c.num} · ${c.title}</p>
-        <h2>Room <span class="code">${net.code}</span></h2>
-        <p class="muted">Share the code. Everyone opens the game, picks Join a room and types it in.</p>
-        <div class="picks">${cards}</div>
-        <ul class="plist">${list}</ul>
-        <p class="muted small">${host ? 'Characters nobody picks stay with you, switch to them with Tab.' : 'The host starts when everyone is ready.'}</p>
-        <div class="row">
-          ${host ? '<button class="btn primary" data-act="start">Start</button>' : ''}
-          <button class="btn quiet" data-act="leave">Leave</button>
-          <button class="btn quiet" data-act="copy">Copy code</button>
-        </div>
-      </div>`;
-    this.show(this.lobby);
-    this.lobby.querySelectorAll('.pick').forEach((b) => b.onclick = () => {
-      const k = b.dataset.k;
-      if (owners[k] === me) net.pickChar('');
-      else if (!net.pickChar(k)) this.toast('Someone already picked ' + NAMES[k] + '.');
-      this.g.audio.ui('ui_toggle');
-    });
-    const st = this.lobby.querySelector('[data-act=start]');
-    if (st) st.onclick = () => { this.g.audio.ui('ui_select'); net.startGame(c.chars); };
-    this.lobby.querySelector('[data-act=leave]').onclick = () => { this.g.audio.ui('ui_back'); this.g.leaveRoom(); };
-    this.lobby.querySelector('[data-act=copy]').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(net.code); this.toast('Code copied.'); };
-  }
-
   showPause() {
     const g = this.g;
+    const inHub = g.chapter === 'hub';
     this.pause.classList.remove('end-screen');
     this.pause.innerHTML = `<div class="pause-wrap">
       <h2>Paused</h2>
       <nav class="stack">
         <button class="btn primary" data-act="resume">Resume</button>
-        <button class="btn" data-act="respawn">Back to checkpoint</button>
-        ${g.net ? '' : '<button class="btn" data-act="restart">Restart chapter</button>'}
+        ${inHub ? '<button class="btn" data-act="change">Change character</button>' : '<button class="btn" data-act="respawn">Back to checkpoint</button>'}
+        ${inHub || g.net ? '' : '<button class="btn" data-act="restart">Restart chapter</button>'}
+        <button class="btn" data-act="settings">Settings</button>
         <button class="btn" data-act="controls">Controls</button>
-        <button class="btn quiet" data-act="quit">${g.net ? 'Leave room' : 'Quit to menu'}</button>
+        ${inHub ? '' : '<button class="btn quiet" data-act="quit">Back to the house</button>'}
       </nav>
-      ${g.net ? `<p class="muted small">Room ${g.net.code}. The game keeps running for the others while you are here.</p>` : ''}
+      ${g.net ? '<p class="muted small">The game keeps running for the others while you are here.</p>' : ''}
       <div id="pauseSide"></div></div>`;
     this.show(this.pause);
     const act = (a) => this.pause.querySelector(`[data-act=${a}]`);
+    const side = $('#pauseSide', this.pause);
     act('resume').onclick = () => g.resume();
-    act('respawn').onclick = () => { g.resume(); g.respawnActive(); };
+    if (act('respawn')) act('respawn').onclick = () => { g.resume(); g.respawnActive(); };
+    if (act('change')) act('change').onclick = () => { g.resume(); g.changeCharacter(); };
     if (act('restart')) act('restart').onclick = () => { g.resume(); g.restartChapter(); };
-    act('controls').onclick = () => { $('#pauseSide', this.pause).innerHTML = `<div class="panel">${this.controlsHTML()}</div>`; };
-    act('quit').onclick = () => g.quitToMenu();
+    act('settings').onclick = () => this.side('settings', null, side);
+    act('controls').onclick = () => { side.innerHTML = `<div class="panel">${this.controlsHTML()}</div>`; };
+    if (act('quit')) act('quit').onclick = () => g.backToHouse();
   }
 
   setHUD(g) {
     const w = g.world;
-    if (!w || g.state !== 'play') { this.hud.innerHTML = ''; return; }
+    if (!w || g.state !== 'play') { this.hud.innerHTML = ''; this.thermo = null; return; }
+    if (g.chapter === 'hub') {
+      const me = g.active;
+      this.hud.innerHTML = me ? `<div class="hud-who"><span class="who on" data-k="${me.kind}"><i class="gl gl-${me.kind}">${GLYPH[me.kind]}</i><em>${escapeHtml(this.nick || NAMES[me.kind])}</em></span></div><div class="hud-room"></div>` : '';
+      this.thermo = null;
+      this.houseCount(g.hub ? g.hub.count() : 1);
+      return;
+    }
     const locals = w.localChars();
     const showSwap = locals.length > 1;
     const butter = w.charByKind('butter');
     const heads = w.chars.map((c) => `<span class="who ${c === g.active ? 'on' : ''} ${c.puppet ? 'remote' : ''}" data-k="${c.kind}"><i class="gl gl-${c.kind}">${GLYPH[c.kind]}</i>${c.puppet && g.net ? `<em>${escapeHtml(g.nickOf(c.kind))}</em>` : ''}</span>`).join('');
     this.hud.innerHTML = `<div class="hud-who">${heads}${showSwap ? `<span class="swap-k"><kbd>Tab</kbd> switch</span>` : ''}</div>
-      ${butter ? '<div class="thermo" id="thermo"><i></i><span></span></div>' : ''}
-      ${g.net ? `<div class="hud-room">${g.net.code}</div>` : ''}`;
+      ${butter ? '<div class="thermo" id="thermo"><i></i><span></span></div>' : ''}`;
     this.thermo = $('#thermo', this.hud);
   }
 
@@ -329,22 +278,26 @@ export class UI {
   }
 
   showEnd(ch, next) {
+    const g = this.g;
     const c = chapterOf(ch), t = trackOf(ch);
     const n = next ? chapterOf(next) : null;
+    const lead = !g.net || g.net.isHost;
+    const host = g.net && g.net.players[g.net.meta.host];
     this.pause.classList.add('end-screen');
     document.body.classList.add('ended');
     this.pause.innerHTML = `<div class="pause-wrap end">
       <p class="eyebrow">${t.name} · Chapter ${c.num} complete</p><h2>${c.title}</h2>
       <p class="end-line">${c.end}</p>
       <nav class="stack">
-        ${n ? `<button class="btn primary" data-act="next">Continue: ${n.title}</button>` : ''}
-        <button class="btn ${n ? '' : 'primary'}" data-act="menu">${this.g.net ? 'Back to the room' : 'Back to the menu'}</button>
+        ${n && lead ? `<button class="btn primary" data-act="next">Continue: ${n.title}</button>` : ''}
+        ${n && !lead ? `<p class="muted small">Waiting for ${escapeHtml(host ? host.nick : 'the host')} to continue to ${n.title}.</p>` : ''}
+        <button class="btn ${n && lead ? '' : 'primary'}" data-act="house">Back to the house</button>
       </nav></div>`;
     this.show(this.pause);
-    const nb = this.pause.querySelector('[data-act=next]');
     const leave = () => { this.pause.classList.remove('end-screen'); document.body.classList.remove('ended'); };
-    if (nb) nb.onclick = () => { this.g.audio.ui('ui_select'); leave(); this.g.afterEnd(next); };
-    this.pause.querySelector('[data-act=menu]').onclick = () => { this.g.audio.ui('ui_back'); leave(); this.g.afterEnd(null); };
+    const nb = this.pause.querySelector('[data-act=next]');
+    if (nb) nb.onclick = () => { g.audio.ui('ui_select'); leave(); g.afterEnd(next); };
+    this.pause.querySelector('[data-act=house]').onclick = () => { g.audio.ui('ui_back'); leave(); g.backToHouse(); };
   }
 
 }

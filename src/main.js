@@ -1,9 +1,10 @@
-// Cutlery entry: boot, game loop, menus, solo and online chapter flow.
+// Cutlery entry: boot, game loop, the house, solo and online chapter flow.
 import { initPhysics } from './physics.js';
 import { Renderer } from './render.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
-import { UI, CHAPTERS, nextChapter } from './ui.js';
+import { UI, nextChapter, trackOf } from './ui.js';
+import { Hub } from './hub.js';
 import { World } from './world.js';
 import { Story } from './story.js';
 import { Net } from './net.js';
@@ -24,6 +25,7 @@ class Game {
     this.story = null;
     this.active = null;
     this.net = null;
+    this.hub = null;
     this.chapter = 0;
     this.acc = 0;
     this.last = performance.now();
@@ -43,10 +45,8 @@ class Game {
     requestAnimationFrame((t) => this.loop(t));
     const legacy = { 1: 'b1', 2: 'd1', 3: 't1' };
     const ch = legacy[params.get('ch')] || params.get('ch');
-    if (ch && LEVELS[ch]) { this.ui.hideLoading(); this.startSolo(ch, { skip: params.has('skip'), cp: +params.get('cp') || 0 }); }
-    else { this.toMenu(); setTimeout(() => this.ui.hideLoading(), 300); }
-    const room = params.get('room');
-    if (room) this.joinRoom(room);
+    if (ch && LEVELS[ch] && ch !== 'hub') { this.ui.hideLoading(); this.startSolo(ch, { skip: params.has('skip'), cp: +params.get('cp') || 0 }); }
+    else { await this.toHub(); setTimeout(() => this.ui.hideLoading(), 300); }
   }
 
   loadWorld(def, opts) {
@@ -69,21 +69,54 @@ class Game {
     return this.world;
   }
 
-  toMenu(focus) {
-    this.state = 'menu';
+  async toHub(o = {}) {
+    this.leaveNetQuiet();
+    if (this.hub) { const h = this.hub; this.hub = null; await h.dispose(); }
+    this.state = 'entry';
+    this.chapter = 'hub';
     this.paused = false;
     this.ending = false;
     this.active = null;
     this.input.enabled = true;
     document.body.classList.remove('playing', 'ended');
-    this.loadWorld(LEVELS.menu, {});
-    this.world.cam.story = { ...LEVELS.menu.cam };
-    this.world.updateCamera(1, null, true);
-    this.ui.setHUD(this);
+    this.loadWorld(LEVELS.hub, {});
+    this.hub = new Hub(this, this.world);
     this.ui.letterbox(false);
-    this.ui.showMenu(focus);
+    this.ui.clearHint();
     this.audio.startMusic('menu');
-    this.audio.ambience('kitchen');
+    this.audio.ambience('quiet');
+    this.audio.setIntensity(0.5);
+    this.hub.connect();
+    if (o.at && this.ui.kind) this.enterHub(this.ui.kind, o.at);
+    else {
+      this.world.cam.story = { ...LEVELS.hub.wide };
+      this.world.updateCamera(1, null, true);
+      this.ui.setHUD(this);
+      this.ui.showEntry();
+    }
+  }
+
+  enterHub(kind, at) {
+    if (!this.hub) return;
+    this.ui.hideAll();
+    this.ui.setKind(kind);
+    this.active = this.hub.spawnLocal(kind, at);
+    this.world.cam.story = null;
+    if (at) this.world.updateCamera(1, this.active, true);
+    this.state = 'play';
+    document.body.classList.add('playing');
+    this.ui.setHUD(this);
+  }
+
+  changeCharacter() {
+    if (!this.hub) return;
+    this.hub.despawnLocal();
+    this.active = null;
+    this.state = 'entry';
+    document.body.classList.remove('playing');
+    this.world.cam.story = { ...LEVELS.hub.wide };
+    this.ui.setHUD(this);
+    this.ui.showEntry();
   }
 
   chooseActive() {
@@ -95,9 +128,10 @@ class Game {
 
   async startSolo(ch, o = {}) {
     this.leaveNetQuiet();
-    this.chapter = ch;
     this.ui.hideAll();
     await this.ui.fade(true, 500);
+    if (this.hub) { const h = this.hub; this.hub = null; h.dispose(); }
+    this.chapter = ch;
     const def = LEVELS[ch];
     this.loadWorld(def, {});
     if (o.cp) { this.world.flags.cp = o.cp; for (const c of this.world.chars) { const sp = this.world.spawnFor(c.kind); c.place(sp.x, sp.y, sp.face || 1); if (c.kind === 'butter' && sp.temp !== undefined) c.temp = sp.temp; } }
@@ -161,10 +195,11 @@ class Game {
 
   restartChapter() { this.startSolo(this.chapter); }
 
-  async quitToMenu() {
-    if (this.net) { await this.leaveRoom(); return; }
+  async backToHouse() {
+    const at = this.chapter;
+    this.leaveNetQuiet();
     await this.ui.fade(true, 400);
-    this.toMenu();
+    await this.toHub({ at });
     this.ui.fade(false, 600);
   }
 
@@ -185,47 +220,16 @@ class Game {
 
   afterEnd(next) {
     if (this.net) {
-      if (this.net.isHost) this.net.tr.update(this.net.path('meta'), { state: 'lobby', ch: next || this.chapter });
+      if (next && this.net.isHost) this.net.startGame(trackOf(next).chars, next);
       return;
     }
     if (next) this.startSolo(next);
-    else this.quitToMenu();
-  }
-
-  async hostRoom(ch) {
-    try {
-      this.ui.toast('Opening a room…');
-      const net = await this.makeNet();
-      const code = await net.createRoom(ch, this.ui.nick || 'Host');
-      this.chapter = ch;
-      this.enterLobby(net);
-      history.replaceState(null, '', '?room=' + code + (net.mode === 'local' ? '&net=local' : ''));
-    } catch (e) {
-      console.error(e);
-      this.ui.toast(this.netError(e), true);
-      this.net = null;
-    }
-  }
-
-  async joinRoom(code) {
-    if (!code || code.length !== 4) { this.ui.toast('Room codes have four letters.', true); return; }
-    try {
-      this.ui.toast('Joining ' + code.toUpperCase() + '…');
-      const net = await this.makeNet();
-      const meta = await net.joinRoom(code, this.ui.nick || 'Guest');
-      this.chapter = meta.ch;
-      this.enterLobby(net);
-      if (meta.state === 'play') this.startOnline(net.meta);
-    } catch (e) {
-      console.error(e);
-      this.ui.toast(this.netError(e), true);
-      if (this.net) { this.net.leave(); this.net = null; }
-    }
+    else this.backToHouse();
   }
 
   netError(e) {
     const m = String(e && e.message || e);
-    if (/permission|PERMISSION_DENIED/i.test(m)) return 'The online server refused the connection. Online play is not switched on yet.';
+    if (/permission|PERMISSION_DENIED/i.test(m)) return 'The online server refused the connection.';
     if (/timed out|network|Failed to fetch/i.test(m)) return 'Could not reach the online server. Check the connection.';
     return m;
   }
@@ -235,35 +239,19 @@ class Game {
     const net = new Net(params.get('net') === 'local' ? 'local' : 'firebase');
     await net.connect();
     this.net = net;
-    net.on('lobby', () => { if (this.state === 'lobby') { this.chapter = net.meta.ch || this.chapter; this.ui.showLobby(net, this.chapter); } else if (this.state === 'play' && net.meta.state === 'lobby') this.returnToLobby(); });
-    net.on('start', (meta) => this.startOnline(meta));
-    net.on('left', (why) => { this.ui.toast(why || 'The room closed.', true); this.net = null; this.toMenu(); });
+    net.on('start', (meta) => { if (this.net === net) this.startOnline(meta); });
+    net.on('left', (why) => { if (this.net !== net) return; this.ui.toast(why || 'The room closed.', true); this.net = null; this.backToHouse(); });
     return net;
-  }
-
-  enterLobby(net) {
-    this.state = 'lobby';
-    if (!this.world || this.world.def !== LEVELS.menu) this.toMenu();
-    this.state = 'lobby';
-    this.ui.showLobby(net, this.chapter);
-    this.audio.ui('ui_open');
-  }
-
-  async returnToLobby() {
-    if (this.net) this.net.detach();
-    await this.ui.fade(true, 400);
-    this.toMenu();
-    this.state = 'lobby';
-    this.ui.showLobby(this.net, this.net.meta.ch || this.chapter);
-    this.ui.fade(false, 500);
   }
 
   async startOnline(meta) {
     const net = this.net;
     if (!net) return;
-    this.chapter = meta.ch;
     this.ui.hideAll();
+    document.body.classList.remove('ended');
     await this.ui.fade(true, 500);
+    if (this.hub) { const h = this.hub; this.hub = null; h.dispose(); }
+    this.chapter = meta.ch;
     net.detach();
     this.loadWorld(LEVELS[meta.ch], { net, uid: net.uid, isHost: meta.owners.host === net.uid, owners: meta.owners });
     net.attach(this.world);
@@ -272,18 +260,8 @@ class Game {
     this.begin(false);
   }
 
-  async leaveRoom() {
-    const n = this.net;
-    this.net = null;
-    if (n) await n.leave();
-    history.replaceState(null, '', location.pathname);
-    await this.ui.fade(true, 300);
-    this.toMenu();
-    this.ui.fade(false, 500);
-  }
-
   leaveNetQuiet() {
-    if (this.net) { this.net.leave(); this.net = null; history.replaceState(null, '', location.pathname); }
+    if (this.net) { this.net.leave(); this.net = null; }
   }
 
   loop(now) {
@@ -297,7 +275,7 @@ class Game {
     if (inp.pausePressed && this.state === 'play' && !this.ending) { if (this.paused) this.resume(); else this.pauseGame(); }
     const w = this.world;
     if (w) {
-      const frozen = this.paused && !this.net;
+      const frozen = this.paused && !this.net && !this.hub;
       if (!frozen) {
         this.acc += dt;
         let n = 0;
@@ -312,19 +290,21 @@ class Game {
       }
       const alpha = frozen ? 1 : this.acc / STEP;
       w.frame(frozen ? 0 : dt, alpha);
-      w.updateCamera(dt, this.active || w.chars[0]);
-      if (this.state === 'play') this.hudFrame(dt);
+      if (this.hub) this.hub.frame(frozen ? 0 : dt);
+      w.updateCamera(dt, this.active || (this.hub ? null : w.chars[0]));
+      if (this.state === 'play' && !this.hub) this.hudFrame(dt);
     }
     this.renderer.render(dt);
   }
 
   fixed(dt, inp) {
     const w = this.world;
+    if (this.hub) this.hub.step(dt);
     if (this.state === 'play') {
       if (inp.swapPressed && !this.story.running) this.swap();
       const inputs = {};
       if (this.story.running) this.story.update(dt, inp);
-      else if (this.active && !this.ending) inputs[this.active.kind] = inp;
+      else if (this.active && !this.ending && !(this.hub && this.hub.busy)) inputs[this.active.kind] = inp;
       w.tick(dt, inputs);
       if (this.net) this.net.publish(w);
       if (w.flags.end && !this.ending) this.endChapter();

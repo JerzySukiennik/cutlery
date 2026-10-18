@@ -191,6 +191,7 @@ export class World {
     this.hints = [];
     this.emitters = [];
     this.ends = [];
+    this.portals = [];
     this.shown = new Set();
     this.spawns = {};
     this.abil = new Set(def.abilities || []);
@@ -213,9 +214,28 @@ export class World {
       this.chars.push(ch);
     }
     for (const m of this.movers) { m.owner = this.owners.host || this.uid; m.puppet = !!this.net && !this.isHost; }
-    const f = this.chars[0];
-    if (f) { this.cam.x = f.pos.x; this.cam.y = f.pos.y; this.cam.tx = f.pos.x; this.cam.ty = f.pos.y; }
+    const f = this.chars[0] || def.cam;
+    if (f) { const p = f.pos || f; this.cam.x = p.x; this.cam.y = p.y; this.cam.tx = p.x; this.cam.ty = p.y; }
     this.camScale = 600;
+  }
+
+  addChar(kind, o = {}) {
+    const ch = new Character(this, kind);
+    ch.meta.id = o.id || kind;
+    ch.owner = o.owner || this.uid;
+    ch.puppet = !!o.puppet;
+    ch.place(o.x ?? 0, o.y ?? 0, o.face || 1);
+    if (kind === 'butter') { ch.temp = this.ambientAt(o.x ?? 0, o.y ?? 0); ch.hard = ch.temp < 0.2; }
+    this.chars.push(ch);
+    return ch;
+  }
+
+  removeChar(ch) {
+    const i = this.chars.indexOf(ch);
+    if (i < 0) return;
+    this.chars.splice(i, 1);
+    if (ch.held) ch.releaseHeld();
+    ch.dispose();
   }
 
   api() {
@@ -245,6 +265,7 @@ export class World {
       trigger: (o) => { W.triggers.push({ done: false, ...o }); },
       hint: (o) => W.hints.push(o),
       end: (o) => W.ends.push(o),
+      portal: (o) => { W.portals.push(o); return o; },
       cam: (o) => W.cams.push(o),
       update: (fn) => W.updaters.push(fn),
       emitter: (o) => W.emitters.push({ acc: 0, ...o }),
@@ -1238,7 +1259,7 @@ export class World {
       const fx = focus.rpos.x + focus.face * 0.8 + focus.vel.x * 0.18;
       const fy = focus.rpos.y;
       let minX = fx, maxX = fx, minY = fy, maxY = fy;
-      for (const c of this.chars) {
+      for (const c of this.def.soloCam ? [] : this.chars) {
         if (c === focus || !c.root.visible) continue;
         if (Math.abs(c.rpos.x - fx) < 11 && Math.abs(c.rpos.y - fy) < 7) {
           minX = Math.min(minX, c.rpos.x); maxX = Math.max(maxX, c.rpos.x);
@@ -1249,7 +1270,7 @@ export class World {
       ty = (minY + maxY) / 2 * 0.7 + fy * 0.3;
       dist += Math.max(0, (maxX - minX) - 8) * 0.9 + Math.max(0, (maxY - minY) - 4) * 1.2;
       for (const z of this.cams) {
-        if (fx < z.x0 || fx > z.x1) continue;
+        if (fx < z.x0 || fx > z.x1 || (z.y0 !== undefined && (fy < z.y0 || fy > z.y1))) continue;
         const edge = Math.min(1, (fx - z.x0) / 3, (z.x1 - fx) / 3);
         if (z.dist) dist += (z.dist - dist) * edge;
         if (z.y !== undefined) ty += (z.y - ty) * edge * (z.lockY ?? 0.6);
@@ -1257,6 +1278,7 @@ export class World {
         if (z.x !== undefined) tx += (z.x - tx) * edge * (z.lockX ?? 0.5);
       }
     }
+    if (this.def.camX && !cam.story) tx = Math.max(this.def.camX[0], Math.min(this.def.camX[1], tx));
     cam.tx = tx; cam.ty = ty;
     const k = cut ? 1 : 1 - Math.exp(-dt * (cam.story ? 1.6 : 3.2));
     cam.x += (tx - cam.x) * k;

@@ -1,4 +1,4 @@
-// Network: Firebase RTDB or same-browser BroadcastChannel rooms, entity sync with interpolation, flags and requests.
+// Network: Firebase RTDB or same-browser BroadcastChannel; the public house presence, chapter rooms, entity sync with interpolation, flags and requests.
 const FIREBASE = {
   apiKey: 'AIzaSyAaTuELH_mToxH3hRJ4WPIVTECSH7Z8-FY',
   authDomain: 'gzowos-games.firebaseapp.com',
@@ -10,6 +10,7 @@ const FIREBASE = {
 };
 const SDK = '10.12.2';
 const ROOT = 'cutlery/rooms';
+const HUB = 'cutlery/hub';
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
 const timeout = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + ' timed out')), ms))]);
@@ -131,15 +132,134 @@ class LocalTransport {
   cancelDisconnect(p) { this.disc = this.disc.filter((x) => x !== p); }
 }
 
+const transports = {};
+function connectTransport(mode) {
+  if (!transports[mode]) {
+    const t = mode === 'local' ? new LocalTransport() : new FirebaseTransport();
+    transports[mode] = t.init().then(() => t).catch((e) => { delete transports[mode]; throw e; });
+  }
+  return transports[mode];
+}
+
+class Interp {
+  constructor() { this.buffers = new Map(); }
+  clear() { this.buffers.clear(); }
+  delete(key) { this.buffers.delete(key); }
+
+  push(key, s) {
+    const now = performance.now();
+    let b = this.buffers.get(key);
+    if (!b) { b = { list: [], off: null }; this.buffers.set(key, b); }
+    const off = now - (s.ts || now);
+    b.off = b.off === null ? off : Math.min(off, b.off + 2);
+    if (b.off > off) b.off = off;
+    b.list.push({ t: (s.ts || now) + b.off, s });
+    if (b.list.length > 30) b.list.shift();
+  }
+
+  sample(key, delay = 120) {
+    const b = this.buffers.get(key);
+    if (!b || !b.list.length) return null;
+    const target = performance.now() - delay;
+    const L = b.list;
+    let i = L.length - 1;
+    while (i > 0 && L[i - 1].t > target) i--;
+    const a = L[Math.max(0, i - 1)], c = L[i];
+    if (target >= L[L.length - 1].t) {
+      const last = L[L.length - 1].s;
+      const ex = Math.min(0.1, (target - L[L.length - 1].t) / 1000);
+      return { ...last, x: last.x + (last.vx || 0) * ex, y: last.y + (last.vy || 0) * ex * (last.s === 0 ? 1 : 0) };
+    }
+    if (a === c || c.t === a.t) return c.s;
+    const k = Math.max(0, Math.min(1, (target - a.t) / (c.t - a.t)));
+    const big = Math.abs(c.s.x - a.s.x) > 3 || Math.abs(c.s.y - a.s.y) > 3 || a.s.s !== c.s.s;
+    if (big) return k > 0.5 ? c.s : a.s;
+    return { ...c.s, x: a.s.x + (c.s.x - a.s.x) * k, y: a.s.y + (c.s.y - a.s.y) * k };
+  }
+}
+
+export class HubLink {
+  constructor(mode) {
+    this.mode = mode;
+    this.interp = new Interp();
+    this.players = {};
+    this.unsubs = [];
+    this.lastPub = 0;
+    this.lastSent = '';
+    this.live = false;
+    this.handlers = { join() {}, change() {}, leave() {}, invite() {} };
+  }
+
+  on(ev, fn) { this.handlers[ev] = fn; }
+
+  async connect() {
+    this.tr = await timeout(connectTransport(this.mode), 20000, 'Connecting');
+    this.uid = this.tr.uid;
+    this.unsubs.push(this.tr.onChild(HUB + '/p', (type, key, val) => {
+      if (key === this.uid) return;
+      const stale = val && this.tr.now() - (val.ts || 0) > 45000;
+      if (type === 'remove' || !val || stale) {
+        if (this.players[key]) { delete this.players[key]; this.interp.delete(key); this.handlers.leave(key); }
+        return;
+      }
+      const fresh = !this.players[key];
+      this.players[key] = val;
+      this.interp.push(key, val);
+      if (fresh) this.handlers.join(key, val); else this.handlers.change(key, val);
+    }));
+    this.unsubs.push(this.tr.onValue(HUB + '/inv/' + this.uid, (v) => {
+      if (!v) return;
+      this.tr.remove(HUB + '/inv/' + this.uid);
+      this.handlers.invite(v);
+    }));
+    return this.uid;
+  }
+
+  now() { return this.tr ? this.tr.now() : Date.now(); }
+
+  publish(state) {
+    if (!this.tr) return;
+    const now = performance.now();
+    const key = JSON.stringify(state);
+    if (now - this.lastPub < 1000 / 12 || (key === this.lastSent && now - this.lastPub < 4000)) return;
+    this.lastPub = now;
+    this.lastSent = key;
+    const p = HUB + '/p/' + this.uid;
+    this.tr.set(p, { ...state, ts: this.tr.now() });
+    if (!this.live) { this.live = true; this.tr.onDisconnectRemove(p); }
+  }
+
+  sample(uid) { return this.interp.sample(uid); }
+
+  hide() {
+    if (!this.tr || !this.live) return Promise.resolve();
+    const p = HUB + '/p/' + this.uid;
+    this.live = false;
+    this.lastSent = '';
+    this.tr.cancelDisconnect(p);
+    return this.tr.remove(p);
+  }
+
+  invite(uid, v) { if (this.tr) this.tr.set(HUB + '/inv/' + uid, v); }
+
+  async leave() {
+    for (const u of this.unsubs) u();
+    this.unsubs = [];
+    await this.hide();
+    this.players = {};
+    this.interp.clear();
+  }
+}
+
 export class Net {
   constructor(mode) {
     this.mode = mode;
-    this.tr = mode === 'local' ? new LocalTransport() : new FirebaseTransport();
+    this.tr = null;
     this.code = null;
     this.uid = null;
     this.players = {};
     this.meta = {};
-    this.buffers = new Map();
+    this.interp = new Interp();
     this.unsubs = [];
     this.world = null;
     this.owned = new Set();
@@ -149,7 +269,8 @@ export class Net {
   }
 
   async connect() {
-    this.uid = await this.tr.init();
+    this.tr = await timeout(connectTransport(this.mode), 20000, 'Connecting');
+    this.uid = this.tr.uid;
     return this.uid;
   }
 
@@ -195,11 +316,11 @@ export class Net {
   watchLobby() {
     this.unsubs.push(this.tr.onValue(this.path('players'), (v) => { this.players = v || {}; this.hostCheck(); this.emit('lobby'); }));
     this.unsubs.push(this.tr.onValue(this.path('meta'), (v) => {
-      const was = this.meta.state;
+      const was = this.meta.state, round = this.meta.round;
       this.meta = v || {};
       if (!v) { this.emit('left', 'The room was closed.'); return; }
       this.emit('lobby');
-      if (v.state === 'play' && was !== 'play') this.emit('start', v);
+      if (v.state === 'play' && (was !== 'play' || v.round !== round)) this.emit('start', v);
     }));
     this.beatTimer = setInterval(() => { if (this.isHost) this.tr.update(this.path('meta'), { beat: this.tr.now() }); }, 20000);
   }
@@ -223,7 +344,7 @@ export class Net {
     return true;
   }
 
-  startGame(chars) {
+  startGame(chars, ch) {
     const owners = {};
     for (const k of chars) {
       const who = Object.entries(this.players).find(([, p]) => p.char === k);
@@ -234,16 +355,12 @@ export class Net {
     this.tr.set(this.path('f'), null);
     this.tr.set(this.path('r'), null);
     this.tr.set(this.path('own'), null);
-    this.tr.update(this.path('meta'), { state: 'play', owners, startAt: this.tr.now() + 600, round: (this.meta.round || 0) + 1 });
-  }
-
-  backToLobby() {
-    if (this.isHost) this.tr.update(this.path('meta'), { state: 'lobby' });
+    this.tr.update(this.path('meta'), { state: 'play', owners, startAt: this.tr.now() + 600, round: (this.meta.round || 0) + 1, ...(ch ? { ch } : {}) });
   }
 
   attach(world) {
     this.world = world;
-    this.buffers.clear();
+    this.interp.clear();
     const owners = this.meta.owners || {};
     this.owned = new Set(Object.keys(owners).filter((k) => k !== 'host' && owners[k] === this.uid));
     this.gameUnsubs = [];
@@ -301,36 +418,11 @@ export class Net {
   }
 
   pushSample(key, s) {
-    const now = performance.now();
-    let b = this.buffers.get(key);
-    if (!b) { b = { list: [], off: null }; this.buffers.set(key, b); }
-    const off = now - (s.ts || now);
-    b.off = b.off === null ? off : Math.min(off, b.off + 2);
-    if (b.off > off) b.off = off;
-    b.list.push({ t: (s.ts || now) + b.off, s });
-    if (b.list.length > 30) b.list.shift();
+    this.interp.push(key, s);
     if (key.startsWith('o_') && this.world) { const m = this.world.movers.find((x) => x.id === key.slice(2)); if (m) m.netMoveT = this.world.time; }
   }
 
-  sample(type, id) {
-    const b = this.buffers.get(type + '_' + id);
-    if (!b || !b.list.length) return null;
-    const target = performance.now() - 120;
-    const L = b.list;
-    let i = L.length - 1;
-    while (i > 0 && L[i - 1].t > target) i--;
-    const a = L[Math.max(0, i - 1)], c = L[i];
-    if (target >= L[L.length - 1].t) {
-      const last = L[L.length - 1].s;
-      const ex = Math.min(0.1, (target - L[L.length - 1].t) / 1000);
-      return { ...last, x: last.x + (last.vx || 0) * ex, y: last.y + (last.vy || 0) * ex * (last.s === 0 ? 1 : 0) };
-    }
-    if (a === c || c.t === a.t) return c.s;
-    const k = Math.max(0, Math.min(1, (target - a.t) / (c.t - a.t)));
-    const big = Math.abs(c.s.x - a.s.x) > 3 || Math.abs(c.s.y - a.s.y) > 3 || a.s.s !== c.s.s;
-    if (big) return k > 0.5 ? c.s : a.s;
-    return { ...c.s, x: a.s.x + (c.s.x - a.s.x) * k, y: a.s.y + (c.s.y - a.s.y) * k };
-  }
+  sample(type, id) { return this.interp.sample(type + '_' + id); }
 
   publish(world, force) {
     const now = performance.now();
