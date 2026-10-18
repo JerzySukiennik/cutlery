@@ -48,7 +48,10 @@ export default {
     L.emitter({ type: 'frost', x: 0.2, y: 5.2, w: 10.6, h: 11.6, rate: 5, z0: -2.6, z1: 1.6 });
 
     b.butterDish(8.2, 13, 2.4, true);
-    b.cheese(6.2, 13, 1.0, 0.42, { d: 1.6 });
+    const ham = new THREE.MeshStandardMaterial({ color: '#e7a7a2', roughness: 0.35 });
+    b.add(mesh(rbox(1.0, 0.42, 1.6, 0.1), ham, 6.7, 13.21, 0));
+    b.add(mesh(rbox(1.04, 0.1, 1.64, 0.04), M.plastic, 6.7, 13.4, 0, { cast: false }));
+    b.col(6.2, 13, 1.0, 0.42, 'plastic');
     eggCarton(L, 4.0, 13, 1.8, 0.85);
     b.decor(() => {
       b.carton(5.0, 13, 1.2, 2.6, { text: 'Milk', sub: 'whole · 1 L', bg: '#fbfaf5', fg: '#3c6aa1', band: '#a9c6e6' });

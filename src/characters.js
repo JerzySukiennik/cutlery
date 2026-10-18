@@ -907,7 +907,7 @@ export class Character {
     a.sag += ((this.soft ? (tm - 0.62) / 0.3 : 0) - a.sag) * (1 - Math.exp(-dt * 4));
     let flat = 0, sx = 1, sy = 1, sz = 1, rz = 0, ox = 0;
     if (this.state === 'smear' && this.smear) {
-      if (this.smear.kind === 'wall') { sx = 0.3; sy = 1.35; sz = 1.15; ox = this.smear.dir * 0.22; this.root.position.y = this.rpos.y - 0.42; }
+      if (this.smear.kind === 'wall') { sx = 0.55; sy = 1.3; sz = 1.25; ox = this.smear.dir * 0.12; this.root.position.y = this.rpos.y - 0.4; }
       else { sx = 1.55; sy = 0.17; sz = 1.25; this.root.position.y = this.smear.y; this.root.position.x = this.smear.x; }
     } else if (this.state === 'spread' && this.smear) {
       const len = this.smear.x1 - this.smear.x0;
@@ -945,7 +945,7 @@ export class Character {
     const ey = 0.38 * (1 - sag * 0.15) * (1 - 0.8 * melt);
     this.eyes.position.set(wob * 0.35 * (ey / 0.62), Math.max(0.1, ey), 0.34 * (1 + 0.45 * melt) + 0.01);
     this.eyes.scale.x = 1 / Math.max(0.3, this.body.scale.x) * (this.state === 'spread' ? 1 : 1);
-    this.eyes.scale.y *= 1 / Math.max(0.2, this.body.scale.y) * (this.state === 'spread' || this.state === 'smear' ? 0.25 : 1) * (this.squish ? 0.6 : 1);
+    this.eyes.scale.y *= 1 / Math.max(0.2, this.body.scale.y) * (this.state === 'spread' ? 0.25 : this.state === 'smear' ? (this.smear && this.smear.kind === 'wall' ? 0.75 : 0.35) : 1) * (this.squish ? 0.6 : 1);
   }
 
   dispose() {

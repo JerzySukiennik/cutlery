@@ -43,3 +43,10 @@ window.shot = (x, y, dist, n = 40) => {
   }
   return 'ok';
 };
+
+window.snap = async (name) => {
+  game.renderer.render(1 / 60);
+  const url = game.renderer.r.domElement.toDataURL('image/jpeg', 0.9);
+  await fetch('/snap?name=' + name, { method: 'POST', body: url });
+  return name;
+};
