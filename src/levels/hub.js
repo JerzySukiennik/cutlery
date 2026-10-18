@@ -10,31 +10,14 @@ const FH = 6.5;
 const FLOORS = [0, 6.5, 13];
 const ROOF = 19.5;
 const RW = 14;
+const SHAFT = 49.6;
+const DECK = 4.2;
 const S = 0.24;
 const std = (o) => new THREE.MeshStandardMaterial(o);
 const cache = {};
 const mat = (k, fn) => cache[k] || (cache[k] = fn());
 const paper = (a, b2, seed = 4) => mat('p' + a + b2, () => { const m = std({ map: T.wallpaper(a, b2, seed), roughness: 0.88 }); m.userData.worldUV = 4; return m; });
 const plaster = (c) => mat('pl' + c, () => { const m = std({ map: T.wallPaint(c), roughness: 0.95 }); m.userData.worldUV = 5; return m; });
-
-function ramp(b, x0, y0, x1, y1, zc, depth) {
-  if (x1 < x0) [x0, y0, x1, y1] = [x1, y1, x0, y0];
-  const len = Math.hypot(x1 - x0, y1 - y0), rot = Math.atan2(y1 - y0, x1 - x0), th = 0.3;
-  const cx = (x0 + x1) / 2 + Math.sin(rot) * th / 2, cy = (y0 + y1) / 2 - Math.cos(rot) * th / 2;
-  b.col(cx - len / 2, cy - th / 2, len, th, 'wood', { rot, slope: true });
-  const M = b.m, n = Math.max(3, Math.round(Math.abs(y1 - y0) / 0.32));
-  const run = (x1 - x0) / n, rise = (y1 - y0) / n;
-  for (let i = 0; i < n; i++) {
-    const sx = x0 + run * (i + 0.5), sy = y0 + rise * (i + 0.5);
-    b.add(mesh(bx(run + 0.02, 0.42, depth), M.woodBoard, sx, sy - 0.21 + Math.abs(rise) / 2, zc));
-  }
-  const str = mesh(rbox(len, 0.34, 0.14, 0.04), M.woodDark, (x0 + x1) / 2, (y0 + y1) / 2 - 0.42, zc + depth / 2 + 0.05);
-  str.rotation.z = rot;
-  b.add(str);
-  const back = str.clone();
-  back.position.z = zc - depth / 2 - 0.05;
-  b.add(back);
-}
 
 function pendant(L, x, ceil, col = '#fff1d6') {
   const b = L.b, M = L.m;
@@ -56,6 +39,55 @@ function keys(b, x, y, w) {
     b.add(mesh(rbox(0.84, 0.3, 2.2, 0.04), white, x + 0.45 + i * 0.9, y, -0.6));
     if (i % 7 !== 2 && i % 7 !== 6 && i < n - 1) b.add(mesh(rbox(0.5, 0.3, 1.3, 0.04), black, x + 0.9 + i * 0.9, y + 0.22, -1.0));
   }
+}
+
+function buildLift(L, W) {
+  const b = L.b, M = L.m;
+  const cx = SHAFT + DECK / 2, top = FLOORS[2];
+  for (const x of [SHAFT + 0.12, SHAFT + DECK - 0.12]) for (const z of [-1.3, 1.3]) b.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, ROOF, 8), M.brass, x, ROOF / 2, z));
+  b.add(mesh(bx(DECK, ROOF, 0.1), mat('shaftBack', () => std({ color: '#3b2c22', roughness: 0.8 })), cx, ROOF / 2, -3.05, { cast: false }));
+  b.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 20), M.iron, cx, ROOF - 0.5, -0.6, { rx: Math.PI / 2 }));
+  const cabin = new THREE.Group();
+  cabin.position.set(cx, 0, 0);
+  cabin.add(mesh(rbox(DECK, 0.3, 2.8, 0.05), M.woodDark, 0, -0.15, -0.1));
+  cabin.add(mesh(rbox(DECK + 0.1, 0.16, 2.9, 0.05), M.brass, 0, 3.55, -0.1));
+  for (const x of [-DECK / 2 + 0.08, DECK / 2 - 0.08]) for (const z of [-1.35, 1.15]) cabin.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.5, 8), M.brass, x, 1.75, z));
+  for (let i = 0; i < 9; i++) cabin.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 3.5, 6), M.brass, -DECK / 2 + 0.3 + i * (DECK - 0.6) / 8, 1.75, -1.38, { cast: false }));
+  for (const y of [1.1, 2.4]) cabin.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, DECK, 8), M.brass, 0, y, -1.38, { rz: Math.PI / 2, cast: false }));
+  const panel = mesh(rbox(0.5, 0.8, 0.1, 0.03), M.dark, DECK / 2 - 0.45, 1.5, -1.3);
+  cabin.add(panel);
+  const btnMat = new THREE.MeshBasicMaterial({ color: '#f2cf63' });
+  for (const y of [1.68, 1.32]) cabin.add(mesh(new THREE.SphereGeometry(0.07, 10, 8), btnMat, DECK / 2 - 0.45, y, -1.24, { cast: false }));
+  cabin.add(mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: '#fff1d6' }), 0, 3.38, -0.3, { cast: false }));
+  const cabinLight = new THREE.PointLight('#ffe2b0', 5, 6, 1.6);
+  cabinLight.position.set(0, 3.0, 0.8);
+  cabin.add(cabinLight);
+  const mech = L.mech({ id: 'lift', x: SHAFT, y: -0.3, w: DECK, h: 0.3, dx: 0, dy: top, ease: false, oneWay: true, carry: true, mat: 'wood', group: cabin });
+  const cable = mesh(new THREE.CylinderGeometry(0.035, 0.035, 1, 6), M.iron, cx, 0, -0.6, { cast: false });
+  b.add(cable, true);
+  const gates = [], dials = [];
+  for (const fy of FLOORS) {
+    const col = W.addStatic({ x: SHAFT - 0.22, y: fy, w: 0.22, h: 3.4, mat: 'metal', id: 'gate' });
+    const g = new THREE.Group();
+    g.position.set(SHAFT - 0.11, fy + 3.4, 0);
+    for (let i = 0; i < 7; i++) { const bar = mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.4, 6), M.brass, 0, -1.7, -1.3 + i * 0.43); g.add(bar); }
+    for (const y of [-0.4, -1.7, -3.0]) g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.7, 6), M.brass, 0, y, 0, { rx: Math.PI / 2 }));
+    b.add(g, true);
+    b.add(mesh(rbox(0.3, 0.3, 3.0, 0.05), M.woodDark, SHAFT - 0.11, fy + 3.55, 0));
+    gates.push({ col, g, k: 0 });
+    const dial = new THREE.Group();
+    dial.position.set(SHAFT - 0.11, fy + 3.78, 1.52);
+    const face = new THREE.Shape(); face.absarc(0, 0, 0.6, 0, Math.PI, false); face.lineTo(0.6, 0);
+    dial.add(mesh(new THREE.ShapeGeometry(face, 20), mat('dialFace', () => std({ color: '#efe1c4', roughness: 0.5 })), 0, 0, 0, { cast: false }));
+    dial.add(mesh(new THREE.TorusGeometry(0.62, 0.05, 6, 24, Math.PI), M.brass, 0, 0, 0.02, { cast: false }));
+    for (let i = 0; i < 3; i++) { const a = Math.PI * (0.8 - i * 0.3); dial.add(mesh(new THREE.CircleGeometry(0.06, 10), new THREE.MeshBasicMaterial({ color: ['#f2cf63', '#a9c8ea', '#f3a46b'][i] }), Math.cos(a) * 0.45, Math.sin(a) * 0.45, 0.02, { cast: false })); }
+    const needle = new THREE.Group();
+    needle.add(mesh(bx(0.04, 0.48, 0.02), M.dark, 0, 0.24, 0.04, { cast: false }));
+    dial.add(needle);
+    b.add(dial, true);
+    dials.push(needle);
+  }
+  return { mech, gates, dials, cable, light: cabinLight, x0: SHAFT, x1: SHAFT + DECK, floors: FLOORS, top, roof: ROOF };
 }
 
 const ROOMS = {
@@ -220,18 +252,22 @@ export default {
     b.add(mesh(bx(220, 0.4, 60), M.woodTable, 27, -1.2, -6, { cast: false }));
     b.add(mesh(bx(220, 90, 0.4), paper('#b9a383', '#a58f70', 9), 27, 30, -22, { cast: false, receive: false }));
     b.add(mesh(rbox(56.6, 0.8, 7.0, 0.1), M.woodDark, 27, -0.6, -0.4));
-    b.col(-40, -4, 140, 4, 'wood');
+    b.col(-40, -4, SHAFT + 40, 4, 'wood');
+    b.col(SHAFT, -4.6, DECK, 4, 'wood');
+    b.col(SHAFT + DECK, -4, 60, 4, 'wood');
 
     for (const x of [-0.25, 54.25]) {
       b.add(mesh(rbox(0.5, ROOF + 0.5, 6.2, 0.06), outside, x, ROOF / 2, -0.4));
       b.col(x - 0.25, 0, 0.5, ROOF + 2, 'plaster');
     }
     for (const y of FLOORS.slice(1)) {
-      b.add(mesh(bx(43.9, 0.5, 5.6), M.woodTable, 21.45, y - 0.25, -0.45, { cast: false }));
-      b.add(mesh(rbox(44.1, 0.22, 0.24, 0.05), M.woodDark, 21.45, y - 0.3, 2.35, { cast: false }));
-      b.col(-0.5, y - 0.5, 43.9, 0.5, 'wood');
+      b.add(mesh(bx(SHAFT + 0.5, 0.5, 5.6), M.woodTable, (SHAFT - 0.5) / 2, y - 0.25, -0.45, { cast: false }));
+      b.add(mesh(rbox(SHAFT + 0.7, 0.22, 0.24, 0.05), M.woodDark, (SHAFT - 0.5) / 2, y - 0.3, 2.35, { cast: false }));
+      b.col(-0.5, y - 0.5, SHAFT + 0.5, 0.5, 'wood');
     }
-    b.add(mesh(bx(54, 0.4, 5.6), M.woodTable, 27, -0.2, -0.45, { cast: false }));
+    b.add(mesh(bx(SHAFT, 0.4, 5.6), M.woodTable, SHAFT / 2, -0.2, -0.45, { cast: false }));
+    b.add(mesh(bx(DECK, 0.3, 5.6), M.dark, SHAFT + DECK / 2, -0.75, -0.45, { cast: false }));
+    b.add(mesh(bx(54 - SHAFT - DECK, 0.4, 5.6), M.woodTable, (SHAFT + DECK + 54) / 2, -0.2, -0.45, { cast: false }));
     b.add(mesh(bx(55, 0.6, 6.0), outside, 27, ROOF + 0.3, -0.45, { cast: false }));
     b.col(-0.5, ROOF, 55, 0.6, 'wood');
 
@@ -267,30 +303,22 @@ export default {
     }
 
     backWall(L, 42.2, 54, 0, ROOF, paper('#e3d3b4', '#d2bf9a', 8));
-    b.add(mesh(rbox(2.4, 3.8, 0.24, 0.05), M.woodDark, 49.2, 1.9, -3.05));
-    b.add(mesh(rbox(1.9, 1.4, 0.06, 0.03), M.glass, 49.2, 2.7, -2.9, { cast: false }));
-    b.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), M.brass, 48.4, 1.8, -2.85));
-    b.add(mesh(rbox(2.6, 0.06, 1.4, 0.02), std({ color: '#8f5a3c', roughness: 1 }), 49.2, 0.03, -1.6, { cast: false }));
-    L.b.photo(46, 4.4, -3.05, 1.6, 1.2);
-    L.b.photo(51.5, 15.2, -3.05, 1.4, 1.8);
-    pendant(L, 48, ROOF, '#fff1d6');
+    b.add(mesh(rbox(2.4, 3.8, 0.24, 0.05), M.woodDark, 44.2, 1.9, -3.05));
+    b.add(mesh(rbox(1.9, 1.4, 0.06, 0.03), M.glass, 44.2, 2.7, -2.9, { cast: false }));
+    b.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), M.brass, 43.4, 1.8, -2.85));
+    b.add(mesh(rbox(2.6, 0.06, 1.4, 0.02), std({ color: '#8f5a3c', roughness: 1 }), 44.2, 0.03, -1.6, { cast: false }));
+    pendant(L, 46, ROOF, '#fff1d6');
     const hall = new THREE.PointLight('#ffd9a8', 10, 22, 1.4); hall.position.set(48, 10, 3); L.light(hall);
+    W.lift = buildLift(L, W);
 
-    ramp(b, 53.2, 0.6, 43.4, FLOORS[1], 0, 2.2);
-    ramp(b, 43.4, FLOORS[1] + 0.6, 52.4, 9.75, 0.2, 2.2);
-    b.add(mesh(rbox(1.6, 0.5, 2.4, 0.04), M.woodBoard, 53.2, 9.5, 0.2));
-    b.col(52.4, 9.25, 1.6, 0.5, 'wood');
-    ramp(b, 52.4, 10.35, 43.4, FLOORS[2], -0.2, 2.2);
-    for (const fl of FLOORS.slice(1)) b.add(mesh(rbox(1.3, 0.5, 2.6, 0.04), M.woodBoard, 42.8, fl - 0.25, 0));
+    floorSign(L, 46.6, 4.5, 'b');
+    floorSign(L, 45.9, FLOORS[1] + 4.5, 'd');
+    floorSign(L, 45.9, FLOORS[2] + 4.5, 't');
 
-    floorSign(L, 45.6, 2.5, 'b');
-    floorSign(L, 46.6, FLOORS[1] + 3.4, 'd');
-    floorSign(L, 46.6, FLOORS[2] + 3.6, 't');
-
-    for (const k of ['fork', 'knife', 'butter']) L.spawn(k, 47.2, 0, -1);
+    for (const k of ['fork', 'knife', 'butter']) L.spawn(k, 46.4, 0, -1);
     L.emitter({ type: 'mote', x: 0, y: 0.5, w: 54, h: 19, rate: 6, z0: -2.6, z1: 2 });
     for (const fl of FLOORS) L.cam({ x0: -6, x1: 43, y0: fl - 0.6, y1: fl + FH - 0.6, y: fl + 3.1, lockY: 0.88, dist: 15.5 });
     L.cam({ x0: 42.6, x1: 60, dist: 17.5 });
-    L.hint({ x: 44, y: 0, w: 10, h: 3, text: 'Jump onto the stairs to go up. Each floor is one story.', dur: 6 });
+    L.hint({ x: 42.4, y: 0, w: 7, h: 3, text: 'Walk up to the lift and it comes. Inside, E goes up and S goes down. Each floor is one story.', dur: 7 });
   },
 };

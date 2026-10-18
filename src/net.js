@@ -242,6 +242,10 @@ export class HubLink {
 
   invite(uid, v) { if (this.tr) this.tr.set(HUB + '/inv/' + uid, v); }
 
+  watchLift(cb) { if (this.tr) this.unsubs.push(this.tr.onValue(HUB + '/lift', (v) => { if (v) cb(v); })); }
+
+  setLift(v) { if (this.tr) this.tr.set(HUB + '/lift', v); }
+
   async leave() {
     for (const u of this.unsubs) u();
     this.unsubs = [];

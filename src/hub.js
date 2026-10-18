@@ -183,8 +183,10 @@ export function floorSign(L, x, y, trackId) {
   };
   paint();
   if (document.fonts) document.fonts.ready.then(paint);
-  L.b.add(mesh3(new THREE.BoxGeometry(3.7, 1.2, 0.12), L.m.woodDark, x, y, -3.08));
-  const face = mesh3(new THREE.PlaneGeometry(3.5, 1.05), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.03 }), x, y, -3.0);
+  const z = -1.5;
+  L.b.add(mesh3(new THREE.BoxGeometry(3.7, 1.2, 0.12), L.m.woodDark, x, y, z - 0.08));
+  for (const dx of [-1.4, 1.4]) L.b.add(mesh3(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 6), L.m.brass, x + dx, y + 1.3, z - 0.08));
+  const face = mesh3(new THREE.PlaneGeometry(3.5, 1.05), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.03 }), x, y, z);
   face.userData.keep = true;
   L.b.add(face, true);
 }
@@ -205,6 +207,8 @@ export class Hub {
     this.uid = 'me';
     this.online = false;
     this.fontsReady = false;
+    this.lift = { from: 0, to: 0, startW: -99, dur: 0.01, t0: 0, callT: 0, prevDown: false, moving: false };
+    if (world.lift) world.lift.mech.drive = () => this.liftY() / world.lift.top;
     document.fonts && document.fonts.ready.then(() => { this.fontsReady = true; for (const p of this.portals) { p.title.userData.key = null; p.status.userData.key = null; } for (const r of this.remotes.values()) r.label.userData.key = null; });
   }
 
@@ -219,6 +223,7 @@ export class Hub {
       this.uid = await link.connect();
       if (this.link !== link) return;
       this.online = true;
+      link.watchLift((v) => this.applyLift(v));
       this.g.ui.houseCount(this.count());
     } catch (e) {
       console.warn('house offline', e);
@@ -330,16 +335,72 @@ export class Hub {
 
   onPortal(p, c) { return p.slots.some((sl) => sl.kind === c.kind && Math.abs(c.pos.x - (p.x + sl.dx)) < 0.75 && Math.abs(c.bottom - p.y) < 0.4); }
 
-  step(dt) {
+  liftY() {
+    const s = this.lift, F = this.w.lift.floors;
+    const k = Math.max(0, Math.min(1, (this.w.time - s.startW) / s.dur));
+    return F[s.from] + (F[s.to] - F[s.from]) * k * k * (3 - 2 * k);
+  }
+
+  liftAt() { return this.w.time < this.lift.startW + this.lift.dur ? -1 : this.lift.to; }
+
+  onLift(c) { const L = this.w.lift; return !!L && c.grounded && c.groundM === L.mech.meta; }
+
+  liftGo(to, quiet) {
+    const L = this.w.lift, s = this.lift, at = this.liftAt();
+    if (!L || at < 0 || to === at || to < 0 || to >= L.floors.length) return false;
+    const F = L.floors;
+    for (const c of this.w.chars) if (Math.abs(c.bottom - F[at]) < 0.4 && Math.abs(c.pos.x - L.x0) < c.hw + 0.12) return false;
+    s.from = at; s.to = to; s.dur = 0.5 + Math.abs(to - at) * 2.1; s.startW = this.w.time + 0.15;
+    s.t0 = this.link && this.online ? this.link.now() + 150 : 0;
+    if (s.t0) this.link.setLift({ from: s.from, to: s.to, t0: s.t0, dur: s.dur });
+    if (!quiet) this.w.sfx('ui_click', L.x0 + 2, F[at] + 1.5, 0.6);
+    return true;
+  }
+
+  applyLift(v) {
+    const s = this.lift;
+    if (!this.w.lift || v.t0 === s.t0 || !(v.dur > 0)) return;
+    s.from = v.from | 0; s.to = v.to | 0; s.dur = v.dur; s.t0 = v.t0;
+    s.startW = this.w.time + (v.t0 - this.link.now()) / 1000;
+  }
+
+  stepLift(dt, inp) {
+    const L = this.w.lift, s = this.lift, me = this.me;
+    if (!L) return;
+    const moving = this.liftAt() < 0;
+    if (moving && !s.moving) { this.w.sfx('creak', L.x0 + 2, this.liftY() + 1.5, 0.5); this.w.sfx('whoosh', L.x0 + 2, this.liftY() + 1.5, 0.4); }
+    if (!moving && s.moving) { this.w.sfx('ding', L.x0 + 2, this.liftY() + 2, 0.7); this.w.effect('sparkle', L.x0 + 2.1, this.liftY() + 3.4); }
+    s.moving = moving;
+    const at = this.liftAt();
+    L.gates.forEach((gt, k) => { gt.col.meta.off = at === k; });
+    if (!me || this.busy) { s.prevDown = false; return; }
+    const down = !!inp.down;
+    if (at >= 0 && this.onLift(me) && me.pos.x - me.hw > L.x0 + 0.02) {
+      if (inp.actionPressed) this.liftGo(at < L.floors.length - 1 ? at + 1 : at - 1);
+      else if (down && !s.prevDown) this.liftGo(at > 0 ? at - 1 : at + 1);
+    }
+    s.prevDown = down;
+    const fl = L.floors.findIndex((y) => Math.abs(me.bottom - y) < 0.3);
+    const riders = this.w.chars.some((c) => this.onLift(c) || (c !== me && this.remotes.get(c.owner) && this.remotes.get(c.owner).v.l));
+    if (fl >= 0 && at >= 0 && at !== fl && !riders && me.pos.x > L.x0 - 2.0 && me.pos.x < L.x0 && me.grounded) {
+      s.callT += dt;
+      if (s.callT > 0.35) { s.callT = 0; this.liftGo(fl); }
+    } else s.callT = 0;
+  }
+
+  step(dt, inp = {}) {
+    this.stepLift(dt, inp);
+    const L = this.w.lift;
     for (const r of this.remotes.values()) {
       const s = this.link && this.link.sample(r.uid);
       if (s && !r.suck) r.ch.applyNet(s);
+      if (s && !r.suck && L && r.v.l) { r.ch.pos.y = this.liftY() + r.ch.hh; r.ch.prev.y = r.ch.pos.y; r.ch.syncCol(); }
       if (!r.hidden && performance.now() - r.seen > 15000) { r.hidden = true; r.ch.setVisible(false); r.ch.meta.off = true; this.g.ui.houseCount(this.count()); }
     }
     for (const p of this.portals) this.stepPortal(p, dt);
     if (this.me && this.link && this.online) {
       const s = this.me.netState();
-      this.link.publish({ k: this.me.kind, n: this.g.ui.nick || NAMES[this.me.kind], d: [...this.g.ui.done].join(','), a: this.suck ? this.suck.p.id : '', x: s.x, y: s.y, vx: s.vx, vy: s.vy, f: s.f, s: s.s, hw: s.hw, hh: s.hh });
+      this.link.publish({ k: this.me.kind, n: this.g.ui.nick || NAMES[this.me.kind], d: [...this.g.ui.done].join(','), a: this.suck ? this.suck.p.id : '', l: this.onLift(this.me) ? 1 : 0, x: s.x, y: s.y, vx: s.vx, vy: s.vy, f: s.f, s: s.s, hw: s.hw, hh: s.hh });
     }
   }
 
@@ -464,6 +525,19 @@ export class Hub {
 
   frame(dt) {
     const t = this.w.time;
+    const L = this.w.lift;
+    if (L) {
+      const y = this.liftY(), at = this.liftAt();
+      L.gates.forEach((gt, k) => {
+        gt.k += ((at === k ? 1 : 0) - gt.k) * Math.min(1, dt * 7);
+        gt.g.scale.y = 1 - gt.k * 0.93;
+      });
+      for (const nd of L.dials) nd.rotation.z = Math.PI * (0.3 - 0.3 * (y / (L.floors[1] - L.floors[0])));
+      const top = L.roof - 0.5, bot = y + 3.62, len = Math.max(0.05, top - bot);
+      L.cable.scale.y = len;
+      L.cable.position.y = bot + len / 2;
+      L.light.intensity = 4 + (at < 0 ? 2 : 0);
+    }
     for (const p of this.portals) {
       p.uni.uTime.value = t;
       p.uni.uOn.value = p.on;

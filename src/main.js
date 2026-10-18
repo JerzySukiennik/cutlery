@@ -299,7 +299,7 @@ class Game {
 
   fixed(dt, inp) {
     const w = this.world;
-    if (this.hub) this.hub.step(dt);
+    if (this.hub) this.hub.step(dt, this.state === 'play' && !this.paused ? inp : NOINPUT);
     if (this.state === 'play') {
       if (inp.swapPressed && !this.story.running) this.swap();
       const inputs = {};

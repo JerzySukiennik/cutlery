@@ -802,7 +802,7 @@ export class World {
       return { x: (c.pos.x - c.prev.x) * inv, y: (c.pos.y - c.prev.y) * inv };
     }
     if (m.box || m.item) { const o = m.box || m.item; return { x: (o.pos.x - o.prev.x) * inv, y: (o.pos.y - o.prev.y) * inv }; }
-    if (m.mech) return { x: m.mech.vx, y: m.mech.vy };
+    if (m.mech) return m.mech.carry ? { x: 0, y: 0 } : { x: m.mech.vx, y: m.mech.vy };
     return { x: 0, y: 0 };
   }
 
@@ -1009,16 +1009,26 @@ export class World {
   }
 
   stepMech(m, dt) {
-    const open = m.when ? !!m.when(this) : false;
-    const target = open ? 1 : 0;
-    const sp = (m.speed || 2.5) / Math.max(0.1, Math.hypot(m.dx || 0, m.dy || 0));
     const pt = m.t;
-    m.t = target > m.t ? Math.min(target, m.t + sp * dt) : Math.max(target, m.t - sp * dt);
-    if (m.t !== pt && Math.abs(m.t - target) < 1e-6 && m.stopSfx) this.sfx(m.stopSfx, m.cx, m.cy, 0.6);
+    if (m.drive) m.t = m.drive(this);
+    else {
+      const target = m.when && m.when(this) ? 1 : 0;
+      const sp = (m.speed || 2.5) / Math.max(0.1, Math.hypot(m.dx || 0, m.dy || 0));
+      m.t = target > m.t ? Math.min(target, m.t + sp * dt) : Math.max(target, m.t - sp * dt);
+      if (m.t !== pt && Math.abs(m.t - target) < 1e-6 && m.stopSfx) this.sfx(m.stopSfx, m.cx, m.cy, 0.6);
+    }
     if (m.t !== pt && !m.moving && m.startSfx) this.sfx(m.startSfx, m.cx, m.cy, 0.6);
     m.moving = m.t !== pt;
     const e = m.ease === false ? m.t : smoothstep(0, 1, m.t);
     const nx = m.x + m.w / 2 + (m.dx || 0) * e, ny = m.y + m.h / 2 + (m.dy || 0) * e;
+    if (m.carry && (nx !== m.cx || ny !== m.cy)) {
+      const oldTop = m.cy + m.h / 2, newTop = ny + m.h / 2;
+      for (const c of this.chars) {
+        if (c.puppet || c.state !== 'walk' || c.vel.y > 0.6) continue;
+        if (Math.abs(c.bottom - oldTop) > 0.14 || Math.abs(c.pos.x - m.cx) > m.w / 2) continue;
+        c.pos.x += nx - m.cx; c.pos.y = newTop + c.hh; c.syncCol();
+      }
+    }
     m.vx = (nx - m.cx) / dt; m.vy = (ny - m.cy) / dt;
     m.cx = nx; m.cy = ny;
     this.phys.place(m.col, nx, ny);

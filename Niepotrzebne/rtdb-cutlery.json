@@ -49,6 +49,9 @@
         },
         "ts": {
           ".validate": "newData.isNumber()"
+        },
+        "l": {
+          ".validate": "newData.isNumber()"
         }
       }
     },
@@ -58,6 +61,11 @@
         ".write": "auth != null",
         ".validate": "newData.child('code').isString() && newData.child('code').val().matches(/^[A-Z]{4}$/) && newData.child('ch').isString() && newData.child('ch').val().matches(/^[dt][1-3]$/) && newData.child('k').isString() && newData.child('from').val() == auth.uid"
       }
+    },
+    "lift": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.child('from').isNumber() && newData.child('from').val() >= 0 && newData.child('from').val() <= 2 && newData.child('to').isNumber() && newData.child('to').val() >= 0 && newData.child('to').val() <= 2 && newData.child('t0').isNumber() && newData.child('dur').isNumber() && newData.child('dur').val() < 10"
     }
   }
 }
