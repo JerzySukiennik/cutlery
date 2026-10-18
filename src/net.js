@@ -22,7 +22,9 @@ class FirebaseTransport {
       import(`https://www.gstatic.com/firebasejs/${SDK}/firebase-database.js`),
     ]), 15000, 'Firebase download');
     const a = app.getApps().length ? app.getApp() : app.initializeApp(FIREBASE);
-    const au = auth.getAuth(a);
+    let au;
+    try { au = auth.initializeAuth(a, { persistence: auth.browserSessionPersistence }); } catch (e) { au = auth.getAuth(a); }
+    if (au.authStateReady) await timeout(au.authStateReady(), 8000, 'Sign-in');
     const cred = au.currentUser ? { user: au.currentUser } : await timeout(auth.signInAnonymously(au), 12000, 'Sign-in');
     this.D = db;
     this.db = db.getDatabase(a);
