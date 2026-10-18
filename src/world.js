@@ -21,6 +21,7 @@ class Mover {
     this.vel = { x: 0, y: 0 };
     this.weight = o.weight ?? 1;
     this.floats = !!o.floats;
+    this.settle = !!o.settle;
     this.meta = { kind: this.type, mat: o.mat || 'wood', top: 0, id: o.id };
     if (this.type === 'box') this.meta.box = this; else this.meta.item = this;
     this.col = w.phys.addBox(this.pos.x, this.pos.y, this.hw, this.hh, 0, this.meta, 0.03);
@@ -63,14 +64,15 @@ class Mover {
       this.moving = !!dir;
       this.strain = (push.r || push.l) && !dir ? 1 : 0;
       this.vel.x = dir ? dir * (eff === 1 && this.weight > 1 ? 3.0 : 2.3) : (this.tip || 0) * 1.6;
-      if (dir) { this.lastMove = w.time; if (!this.dragSnd || w.time - this.dragSnd > 0.32) { this.dragSnd = w.time; w.sfx(this.meta.mat === 'glass' || this.meta.mat === 'ceramic' ? 'plateSoft' : 'drag', this.pos.x, this.pos.y, 0.3); } }
+      if (dir) { this.lastMove = w.time; if (!this.dragSnd || w.time - this.dragSnd > 0.32) { this.dragSnd = w.time; w.sfx(this.meta.mat === 'glass' || this.meta.mat === 'ceramic' ? 'plateSoft' : 'drag', this.pos.x, this.pos.y, 0.3); w.fx.emit('step', this.pos.x - dir * this.hw, this.pos.y - this.hh, 0.3, 2); } }
     } else if (this.grounded) this.vel.x *= Math.exp(-9 * dt);
     this.vel.y = Math.max(-24, this.vel.y - 30 * dt);
     const vy0 = this.vel.y;
-    const res = w.phys.move(this.col, this.vel.x * dt, this.vel.y * dt, this.pred);
+    const res = w.phys.move(this.col, this.vel.x * dt, this.vel.y * dt, this.pred, true);
     this.pos.x += res.dx; this.pos.y += res.dy;
     const was = this.grounded;
     this.grounded = res.grounded && this.vel.y <= 0;
+    if (this.grounded && !was && this.settle && vy0 < -6) { this.weight = 99; this.home = { x: this.pos.x, y: this.pos.y }; w.solve(this.pos.x, this.pos.y + this.hh); }
     if (this.grounded) {
       if (!was && vy0 < -4) {
         w.sfx(this.meta.mat === 'glass' || this.meta.mat === 'ceramic' ? 'plate' : this.type === 'item' ? 'soft' : 'wood', this.pos.x, this.pos.y, Math.min(1, -vy0 / 14));
@@ -86,17 +88,21 @@ class Mover {
       if (!ground(0.02) || !ground(-0.02)) {
         const l = ground(-this.hw * 0.92), r = ground(this.hw * 0.92);
         this.tip = l && !r ? 1 : r && !l ? -1 : 0;
+        if (!l && !r) {
+          const gh = res.hits.find((h) => h.ny > 0.45 && h.m.collider);
+          if (gh) this.tip = Math.sign(this.pos.x - gh.m.collider.translation().x) || 1;
+        }
       }
     }
     if (this.vel.y > 0 && res.dy < this.vel.y * dt - 0.002) this.vel.y = 0;
     const wat = this.floats ? w.waterAt(this.pos.x) : null;
     if (wat && this.pos.y - this.hh < wat.y - this.hh * 0.9) {
-      if (!this.afloat) { w.sfx('splash', this.pos.x, wat.y, 0.9); w.fx.emit('splash', this.pos.x, wat.y, 0.4); }
+      if (!this.afloat) { w.sfx('splash', this.pos.x, wat.y, 0.9); w.fx.emit('splash', this.pos.x, wat.y, 0.4); this.vel.x = 0; }
       this.afloat = true;
       this.pos.y = wat.y - this.hh * 0.9 + this.hh;
       this.vel.y = 0;
       this.grounded = true;
-      this.vel.x *= Math.exp(-3 * dt);
+      this.vel.x *= Math.exp(-8 * dt);
     }
     if (this.pos.y < w.killY(this.pos.x) || (!this.floats && w.inWater(this.pos.x, this.pos.y - this.hh))) this.reset();
     this.sync();
@@ -130,6 +136,7 @@ class Mover {
   }
 
   applyNet(s) {
+    if (this.settle && this.weight < 99 && s.y < this.home.y - 1) this.weight = 99;
     this.pos.x = s.x; this.pos.y = s.y;
     this.vel.x = s.vx || 0; this.vel.y = s.vy || 0;
     this.carrier = s.c ? this.w.charByKind(s.c) : null;
@@ -175,6 +182,10 @@ export class World {
     this.triggers = [];
     this.fallers = [];
     this.topplers = [];
+    this.launchers = [];
+    this.pianos = [];
+    this.seesaws = [];
+    this.slashes = [];
     this.cams = [];
     this.updaters = [];
     this.hints = [];
@@ -227,6 +238,10 @@ export class World {
       item: (o) => W.addItem(o),
       toaster: (o) => W.addToaster(o),
       toppler: (o) => W.addToppler(o),
+      launcher: (o) => W.addLauncher(o),
+      piano: (o) => W.addPiano(o),
+      seesaw: (o) => W.addSeesaw(o),
+      solve: (x, y) => W.solve(x, y),
       trigger: (o) => { W.triggers.push({ done: false, ...o }); },
       hint: (o) => W.hints.push(o),
       end: (o) => W.ends.push(o),
@@ -242,6 +257,7 @@ export class World {
   addStatic(c) {
     const meta = { kind: 'static', mat: c.mat, oneWay: !!c.oneWay, grate: !!c.grate, food: c.food || null, id: c.id || null, top: c.y + c.h };
     if (c.slope) meta.slope = { x0: c.x + c.w / 2, y0: c.y + c.h / 2 + c.h / 2 / Math.cos(c.rot || 0), k: Math.tan(c.rot || 0) };
+    for (const k of ['gap', 'gx0', 'seep', 'spring', 'springPower', 'onBounce', 'onLand', 'key']) if (c[k] !== undefined) meta[k] = c[k];
     const col = this.phys.addBox(c.x + c.w / 2, c.y + c.h / 2, c.w / 2, c.h / 2, c.rot || 0, meta);
     c.meta = meta;
     return col;
@@ -348,6 +364,18 @@ export class World {
     const M = this.mt;
     const g = new THREE.Group();
     g.position.set(o.x + o.w / 2, o.y, 0);
+    if (o.look === 'handle') {
+      const lever = new THREE.Group();
+      lever.position.set(o.w / 2, -0.1, 0.6);
+      lever.add(mesh(rbox(o.w + 0.4, 0.2, 0.6, 0.09), M.brass, -o.w / 2, 0, 0));
+      g.add(lever);
+      g.add(mesh(rbox(0.8, 1.6, 0.25, 0.08), M.brass, o.w / 2, -0.1, 0.35));
+      this.b.add(g, true);
+      const p = { pressed: false, load: 0, shown: -1, g, top: lever, handle: true, ...o };
+      this.b.col(o.x, o.y - 0.2, o.w, 0.2, 'metal');
+      this.plates.push(p);
+      return p;
+    }
     const body = mesh(rbox(o.w + 0.3, 0.55, 2.2, 0.12), M.ceramic, 0, -0.27, 0);
     const top = mesh(rbox(o.w, 0.14, 2.0, 0.05), M.steel, 0, 0.07, 0);
     const cv = document.createElement('canvas'); cv.width = 128; cv.height = 48;
@@ -417,7 +445,175 @@ export class World {
         this.sfx(t.sound || 'woodHeavy', L.x + L.w / 2, L.y, 1);
         this.fx.emit('dust', L.x + L.w / 2, L.y, 0.5, 16);
         this.cam.shake = 0.3;
+        this.solve(L.x + L.w / 2, L.y + L.h + 0.5);
         if (t.onLand) t.onLand(this, t);
+      }
+    }
+  }
+
+  assignHelpers() {
+    const a = this.game.active;
+    for (const c of this.chars) c.helpDir = 0;
+    if (!a || a.puppet || !a.pushing) return;
+    const p = a.pushing;
+    const tgt = p.box || this.topplers.find((t) => t.id === p.id);
+    if (!tgt) return;
+    const cx = tgt.pos ? tgt.pos.x : tgt.x + tgt.w / 2, hw = tgt.pos ? tgt.hw : tgt.w / 2;
+    const cy = tgt.pos ? tgt.pos.y : tgt.y + tgt.h / 2, hh = tgt.pos ? tgt.hh : tgt.h / 2;
+    const face = cx - p.dir * hw;
+    for (const c of this.chars) {
+      if (c === a || c.puppet || c.state !== 'walk' || !c.grounded) continue;
+      const gap = (face - (c.pos.x + p.dir * c.hw)) * p.dir;
+      if (gap > -0.1 && gap < 1.6 && Math.abs(c.pos.y - cy) < c.hh + hh) c.helpDir = p.dir;
+    }
+  }
+
+  addLauncher(o) {
+    const M = this.mt, w = o.w || 2.2;
+    const g = new THREE.Group();
+    g.position.set(o.x + w / 2, o.y, 0);
+    const base = mesh(rbox(w, 0.22, 1.2, 0.05), M.woodBoard, 0, 0.11, 0);
+    const plate = mesh(rbox(w * 0.36, 0.06, 0.6, 0.02), M.steel, w * 0.18, 0.25, 0);
+    const bar = new THREE.Group();
+    bar.position.set(-w * 0.05, 0.25, 0);
+    const wire = new THREE.MeshStandardMaterial({ color: '#c9ccd0', metalness: 1, roughness: 0.3 });
+    bar.add(mesh(new THREE.TorusGeometry(w * 0.32, 0.035, 6, 20, Math.PI), wire, w * 0.32, 0, 0, { rx: Math.PI / 2 }));
+    const spring = mesh(new THREE.TorusGeometry(0.12, 0.04, 6, 12), wire, -w * 0.05, 0.3, 0.45);
+    const bait = mesh(new THREE.ConeGeometry(0.22, 0.3, 3), M.cheese, w * 0.22, 0.42, 0, { rz: Math.PI / 2 });
+    g.add(base, plate, bar, spring, bait);
+    this.b.add(g, true);
+    const L = { ...o, w, g, bar, armed: true, snapT: 0, armT: 0, flipN: 0, top: o.y + 0.25 };
+    const col = this.addStatic({ x: o.x, y: o.y, w, h: 0.25, mat: 'wood', id: o.id });
+    L.meta = col.meta;
+    this.launchers.push(L);
+    return L;
+  }
+
+  stepLaunchers(dt) {
+    for (const L of this.launchers) {
+      const f = this.flags['lt_' + L.id] || 0;
+      if (f !== L.flipN) {
+        L.flipN = f;
+        L.snapT = 1;
+        L.armed = false;
+        L.armT = 1.3;
+        this.sfx('snap', L.x + L.w / 2, L.y, 1);
+        this.fx.emit('wood', L.x + L.w / 2, L.top, 0.3, 8);
+        this.fx.emit('sparkle', L.x + L.w / 2, L.top + 0.3, 0.3, 6);
+        this.fx.ring('ring', L.x + L.w / 2, L.top, 0.3, 14, 3);
+        this.shake(0.2);
+        for (const c of this.chars) {
+          if (c.puppet || c.state !== 'walk') continue;
+          if (Math.abs(c.pos.x - (L.x + L.w / 2)) < L.w / 2 + 0.1 && c.bottom < L.top + 0.4 && c.bottom > L.y - 0.1) {
+            c.vel.y = L.power || 21; c.vel.x = L.push || 0; c.grounded = false; c.jumping = false; c.anim.squashV -= 14;
+            c.pos.y += 0.05;
+          }
+        }
+      }
+      if (!L.armed) { L.armT -= dt; if (L.armT <= 0) { L.armed = true; this.sfx('latch', L.x + L.w / 2, L.y, 0.4); } }
+      L.snapT = Math.max(0, L.snapT - dt * 2.5);
+      L.bar.rotation.z = L.armed ? Math.PI * 0.82 : Math.PI * 0.82 * (L.armT < 0.6 ? (0.6 - L.armT) / 0.6 : 0);
+      if (!L.armed) continue;
+      const c = this.chars.find((q) => !q.puppet && q.state === 'walk' && q.grounded && q.groundM === L.meta && Math.abs(q.pos.x - (L.x + L.w / 2)) < L.w / 2 + 0.1);
+      if (c) { L.armed = false; this.setFlag('lt_' + L.id, (this.flags['lt_' + L.id] || 0) + 1); }
+    }
+  }
+
+  addPiano(o) {
+    const M = this.mt;
+    const n = o.keys || 14, kw = o.kw || 0.9, y = o.y;
+    const ivory = new THREE.MeshStandardMaterial({ color: '#f6f1e6', roughness: 0.25 });
+    const ebony = new THREE.MeshStandardMaterial({ color: '#1b1714', roughness: 0.2 });
+    const P = { ...o, n, kw, keys: [], notes: o.notes || [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84] };
+    for (let i = 0; i < n; i++) {
+      const x = o.x + i * kw;
+      const k = mesh(rbox(kw - 0.06, 0.5, 2.6, 0.04), ivory, x + kw / 2, y - 0.25, 0.4);
+      this.b.add(k, true);
+      if (i % 7 !== 2 && i % 7 !== 6 && i < n - 1) this.b.add(mesh(rbox(kw * 0.55, 0.35, 1.6, 0.03), ebony, x + kw, y + 0.12, -0.45), true);
+      const col = this.addStatic({ x, y: y - 0.5, w: kw, h: 0.5, mat: 'wood', key: i, id: (o.id || 'pn') + '_' + i });
+      P.keys.push({ mesh: k, meta: col.meta, down: 0, pressed: false, base: y - 0.25 });
+    }
+    this.pianos.push(P);
+    return P;
+  }
+
+  stepPiano(P, dt) {
+    for (let i = 0; i < P.keys.length; i++) {
+      const k = P.keys[i];
+      const x0 = P.x + i * P.kw, x1 = x0 + P.kw;
+      const on = this.chars.some((c) => (c.state === 'walk' || c.state === 'script') && c.pos.x > x0 - c.hw * 0.4 && c.pos.x < x1 + c.hw * 0.4 && c.bottom > P.y - 0.15 && c.bottom < P.y + 0.12 && Math.abs(c.vel.y) < 2.5);
+      if (on && !k.pressed) {
+        this.game.audio.key(P.notes[i % P.notes.length]);
+        this.fx.emit('note', (x0 + x1) / 2, P.y + 0.6, 0.6, 1);
+      }
+      k.pressed = on;
+      k.down += ((on ? 1 : 0) - k.down) * Math.min(1, dt * 18);
+      k.mesh.position.y = k.base - k.down * 0.12;
+      k.mesh.rotation.x = k.down * 0.04;
+    }
+  }
+
+  addSeesaw(o) {
+    const M = this.mt, len = o.len || 5, tilt = o.tilt || 0.26;
+    const g = new THREE.Group();
+    g.position.set(o.x, o.y, 0);
+    const plank = new THREE.Group();
+    plank.add(mesh(rbox(len, 0.18, 1.4, 0.06), o.mat === 'metal' ? M.steel : M.woodBoard, 0, 0.09, 0));
+    plank.add(mesh(new THREE.SphereGeometry(0.5, 16, 10), o.mat === 'metal' ? M.steel : M.woodBoard, len / 2 - 0.3, 0.12, 0, { sx: 1.2, sy: 0.35, sz: 0.9 }));
+    g.add(plank);
+    const fulcrum = mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.6, 20), o.fulcrumMat ? M[o.fulcrumMat] : M.ceramicCream, 0, -0.45, 0, { rx: Math.PI / 2 });
+    g.add(fulcrum);
+    this.b.add(g, true);
+    const S = { ...o, len, tilt, g, plank, side: o.side || -1, ang: 0, flipN: 0, col: null };
+    S.ang = S.side * -tilt;
+    this.seesaws.push(S);
+    this.placeSeesaw(S);
+    return S;
+  }
+
+  placeSeesaw(S) {
+    if (S.col) this.phys.remove(S.col);
+    const a = S.ang;
+    const cx = S.x - Math.sin(a) * 0.09, cy = S.y + Math.cos(a) * 0.09;
+    const W = this;
+    S.col = this.addStatic({ x: cx - S.len / 2, y: cy - 0.09, w: S.len, h: 0.18, rot: a, mat: 'wood', id: S.id, slope: false, onLand: (w, ch, v) => W.seesawLand(S, ch, v) });
+    S.meta = S.col.meta;
+    S.plank.rotation.z = a;
+  }
+
+  seesawLand(S, ch, v) {
+    const dx = ch.pos.x - S.x;
+    const high = -S.side;
+    if (Math.sign(dx) === high && Math.abs(dx) > S.len * 0.2 && v > (S.minV || 5.5)) {
+      this.setFlag('ss_' + S.id, (this.flags['ss_' + S.id] || 0) + 1);
+    }
+  }
+
+  stepSeesaws(dt) {
+    for (const S of this.seesaws) {
+      const f = this.flags['ss_' + S.id] || 0;
+      if (f !== S.flipN) {
+        S.flipN = f;
+        const old = S.side;
+        S.side = -S.side;
+        for (const c of this.chars) {
+          if (c.puppet || c.state !== 'walk') continue;
+          const dx = c.pos.x - S.x;
+          if (Math.sign(dx) === old && Math.abs(dx) < S.len / 2 + 0.2 && Math.abs(dx) > 0.3 && c.bottom > S.y - 1.2 && c.bottom < S.y + 1.4) {
+            c.vel.y = S.power || 18; c.vel.x = (S.push || 0) * (S.pushDir || -old); c.grounded = false; c.jumping = false; c.pos.y += 0.1; c.anim.squashV -= 12;
+          }
+        }
+        this.sfx('woodHeavy', S.x, S.y, 0.9);
+        this.sfx('twang', S.x, S.y, 0.4);
+        this.fx.ring('ring', S.x + old * S.len * 0.4, S.y, 0.3, 12, 3);
+        this.fx.emit('sparkle', S.x + old * S.len * 0.4, S.y + 0.5, 0.3, 6);
+        this.shake(0.18);
+      }
+      const target = S.side * -S.tilt;
+      if (Math.abs(S.ang - target) > 0.001) {
+        S.ang += (target - S.ang) * Math.min(1, dt * 22);
+        if (Math.abs(S.ang - target) < 0.01) S.ang = target;
+        this.placeSeesaw(S);
       }
     }
   }
@@ -425,6 +621,10 @@ export class World {
   addToaster(o) {
     const { gr, lever } = this.b.toaster(o.x, o.y, o.w || 3.2, o.h || 2.4);
     const t = { id: o.id, x: o.x, y: o.y, w: o.w || 3.2, top: o.y + (o.h || 2.4), slotX: o.x + (o.w || 3.2) / 2, power: o.power || 20, delay: o.delay || 1.6, push: o.push || 0, lever, gr, leverY: lever.position.y, occupied: null };
+    const glow = mesh(new THREE.PlaneGeometry((o.w || 3.2) * 0.8, 1.4), new THREE.MeshBasicMaterial({ map: this.mt.shadowBlob.map, color: '#ff8a3a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }), t.slotX, t.top + 0.1, 1.05, { cast: false, receive: false });
+    glow.renderOrder = 6;
+    this.b.add(glow, true);
+    t.glow = glow;
     this.toasters.push(t);
     this.zones.push({ x: t.x, y: t.top - 0.2, w: t.w, h: 1.0, rate: 0.07, fx: 'heat', when: () => !!this.flags['ts_' + t.id] });
     return t;
@@ -465,13 +665,66 @@ export class World {
     this.game.audio.sfx(name, vol * att, Math.max(-0.8, Math.min(0.8, dx / 14)));
   }
 
-  effect(type, x, y, variant) {
-    if (type === 'dust') this.fx.emit(variant === 'butter' ? 'butter' : 'dust', x, y, 0.3);
-    else if (type === 'crumbs') this.fx.emit(variant || 'bread', x, y, 0.4);
-    else if (type === 'chips') this.fx.emit('wood', x, y, 0.4);
-    else if (type === 'spark') this.fx.emit('spark', x, y, 0.4);
-    else if (type === 'poof') this.fx.emit('poof', x, y, 0.3);
-    else this.fx.emit(type, x, y, 0.3);
+  effect(type, x, y, variant, power = 0) {
+    const F = this.fx;
+    if (type === 'dust') F.emit(variant === 'butter' ? 'butter' : 'dust', x, y, 0.3);
+    else if (type === 'crumbs') { F.emit(variant || 'bread', x, y, 0.4); F.emit('sparkle', x, y, 0.5, 3); }
+    else if (type === 'chips') F.emit('wood', x, y, 0.4);
+    else if (type === 'spark') F.emit('spark', x, y, 0.4);
+    else if (type === 'poof') F.emit('poof', x, y, 0.3);
+    else if (type === 'puff') F.emit(variant === 'butter' ? 'butterPuff' : 'puff', x, y, 0.3);
+    else if (type === 'step') F.emit(variant === 'butter' ? 'butterStep' : 'step', x, y, 0.35);
+    else if (type === 'land') { const n = Math.min(18, 4 + Math.round(power * 0.8)); F.ring(variant === 'butter' ? 'butterRing' : 'ring', x, y, 0.3, n, 1.2 + power * 0.18); if (variant === 'butter' && power > 6) F.emit('butter', x, y + 0.1, 0.4, 6); }
+    else if (type === 'bounce') { F.ring('ring', x, y, 0.3, 14, 3.5); F.emit('sparkle', x, y + 0.2, 0.4, 6); }
+    else if (type === 'splash') F.emit('splash', x, y, 0.4, 10);
+    else if (type === 'steam') F.emit('steamPuff', x, y, 0.3, 8);
+    else if (type === 'frostBurst') { F.emit('frostBurst', x, y, 0.4, 14); F.emit('sparkle', x, y, 0.4, 4); }
+    else if (type === 'sparkle') F.emit('sparkle', x, y, 0.4, 10);
+    else F.emit(type, x, y, 0.3);
+  }
+
+  shake(a) { this.cam.shake = Math.max(this.cam.shake, a); }
+
+  solve(x, y) {
+    this.game.audio.sting();
+    this.fx.emit('sparkle', x, y, 0.5, 26);
+    this.fx.ring('ring', x, y - 0.2, 0.4, 20, 4);
+    this.shake(0.16);
+  }
+
+  slash(x, y, dir) {
+    let sl = this.slashes.find((q) => q.t >= q.dur);
+    if (!sl) {
+      if (!this.slashGeo) {
+        const sh = new THREE.Shape();
+        sh.absarc(0, 0, 1, -1.1, 1.1, false);
+        sh.absarc(0.25, 0, 0.82, 1.0, -1.0, true);
+        this.slashGeo = new THREE.ShapeGeometry(sh, 16);
+      }
+      const m = new THREE.Mesh(this.slashGeo, new THREE.MeshBasicMaterial({ color: '#fff6e2', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+      m.renderOrder = 12;
+      sl = { m, t: 1, dur: 0.18 };
+      this.slashes.push(sl);
+      this.b.root.add(m);
+    }
+    sl.t = 0;
+    sl.m.position.set(x, y, 0.6);
+    sl.m.scale.set(dir * 0.9, 1.1, 1);
+    sl.m.rotation.z = 0;
+  }
+
+  seepDrip(s, ch) {
+    if (s.dir === 'down') {
+      const n = Math.max(1, Math.floor((ch.hw * 2) / s.gap));
+      const k = Math.floor(Math.random() * n);
+      let gx = s.gx0 + (Math.floor((ch.pos.x - ch.hw - s.gx0) / s.gap) + k + 0.5) * s.gap;
+      gx = Math.max(s.gl + 0.05, Math.min(s.gr - 0.05, gx));
+      this.fx.emit('drip', gx, s.gt - 0.02, (Math.random() - 0.5) * 1.2, 1);
+    } else {
+      const gy = s.gb + Math.random() * (s.gt - s.gb);
+      const gx = s.dir > 0 ? s.gl : s.gr;
+      this.fx.emit(s.dir > 0 ? 'dripRight' : 'dripLeft', gx, Math.min(gy, ch.pos.y + 0.12), (Math.random() - 0.5) * 1.0, 1);
+    }
   }
 
   onDeath(ch) {
@@ -631,6 +884,7 @@ export class World {
       if (Math.abs(rx - cx) < hw + 0.1 && cy - hh < top && cy + hh > bot) {
         this.setFlag('rope_' + r.id, 1);
         this.sfx('slice', rx, cy, 0.9);
+        this.fx.emit('sparkle', rx, Math.min(top, Math.max(bot, cy)), 0.3, 5);
         return true;
       }
     }
@@ -648,7 +902,8 @@ export class World {
       }
       this.setFlag('cut_' + c.id, 1);
       this.sfx('slice', c.x + c.w / 2, cy, 1);
-      this.fx.emit(c.food === 'cheese' ? 'cheese' : 'bread', cx, cy, 0.5, 14);
+      this.fx.emit(c.food === 'cheese' ? 'cheese' : 'bread', cx, cy, 0.5, 20);
+      this.fx.emit('sparkle', cx, cy, 0.5, 6);
       return true;
     }
     return false;
@@ -666,13 +921,23 @@ export class World {
       c.meta.off = true;
     }
     if (c.onCut) c.onCut(this, c);
+    if (!c.fallsLater) this.solve(c.x + c.w / 2, c.y + c.h * 0.6);
   }
 
   toasterPop(t) {
     this.setFlag('ts_' + t.id, 0);
+    this.popFx(t);
+  }
+
+  popFx(t) {
     this.sfx('pop', t.slotX, t.top, 1);
-    this.fx.emit('bread', t.slotX, t.top + 0.2, 0.3, 8);
-    this.cam.shake = 0.25;
+    this.sfx('ding', t.slotX, t.top, 0.7);
+    this.fx.emit('bread', t.slotX, t.top + 0.2, 0.3, 16);
+    this.fx.emit('steamPuff', t.slotX, t.top + 0.3, 0.2, 10);
+    this.fx.emit('sparkle', t.slotX, t.top + 0.4, 0.3, 8);
+    this.fx.ring('ring', t.slotX, t.top + 0.05, 0.2, 14, 3);
+    t.kick = 1;
+    this.shake(0.25);
   }
 
   tick(dt, inputs) {
@@ -686,6 +951,7 @@ export class World {
       if (c.group && !c.cut) c.group.rotation.z = Math.sin(this.time * 30) * 0.04 * c.wob;
     }
     for (const r of this.ropes) if (!r.cut && this.flags['rope_' + r.id]) this.cutRope(r);
+    this.assignHelpers();
     for (const c of this.chars) {
       c.step(dt, inputs[c.kind] || NOINPUT);
       if (c.puppet && c.override <= 0 && this.net) { const s = this.net.sample('c', c.kind); if (s) c.applyNet(s); }
@@ -696,6 +962,8 @@ export class World {
     }
     this.claimPushed();
     this.stepTopplers(dt);
+    this.stepLaunchers(dt);
+    this.stepSeesaws(dt);
     this.stepToasters(dt);
     if (this.isHost) this.stepPlates();
     else for (const p of this.plates) this.updatePlateVisual(p, !!this.flags['pl_' + p.id]);
@@ -763,6 +1031,7 @@ export class World {
       this.sfx(f.sound || 'wood', to.x, to.y, 1);
       this.fx.emit('dust', to.x, to.y, 0.5, 12);
       this.cam.shake = Math.max(this.cam.shake, 0.18);
+      if (f.solve !== false) this.solve(to.x, to.y + 0.5);
       if (f.onLand) f.onLand(this, f);
     }
   }
@@ -817,6 +1086,12 @@ export class World {
   stepToasters(dt) {
     for (const t of this.toasters) {
       const busy = this.flags['ts_' + t.id];
+      if (t.wasBusy && !busy && !t.kick) this.popFx(t);
+      t.wasBusy = !!busy;
+      t.kick = Math.max(0, (t.kick || 0) - dt * 4);
+      t.gr.position.y = t.y + Math.sin(t.kick * 20) * 0.04 * t.kick;
+      t.glowT = (t.glowT || 0) + ((busy ? 1 : 0) - (t.glowT || 0)) * Math.min(1, dt * 3);
+      if (t.glow) t.glow.material.opacity = t.glowT * (0.55 + Math.sin(this.time * 9) * 0.08);
       const ly = t.leverY - (busy ? 0.7 : 0);
       t.lever.position.y += (ly - t.lever.position.y) * Math.min(1, dt * 14);
       if (busy && Math.random() < dt * 6) this.fx.emit('heat', t.slotX + (Math.random() - 0.5) * 1.5, t.top + 0.2, 0.2, 1);
@@ -863,6 +1138,12 @@ export class World {
   }
 
   updatePlateVisual(p, pressed, load) {
+    if (p.handle) {
+      p.top.rotation.z += ((pressed ? -0.35 : 0) - p.top.rotation.z) * 0.25;
+      if (pressed && !p.pressed) this.sfx('latch', p.x + p.w / 2, p.y, 0.9);
+      p.pressed = pressed;
+      return;
+    }
     p.top.position.y += ((pressed ? 0.0 : 0.07) - p.top.position.y) * 0.3;
     const grams = Math.round((load ?? (pressed ? p.need : 0)) * 125);
     if (p.shown !== grams || p.pressed !== pressed) {
@@ -878,7 +1159,13 @@ export class World {
     for (let i = this.checkpoints.length - 1; i > cur; i--) {
       const cp = this.checkpoints[i];
       const hit = this.chars.some((c) => !c.puppet && c.state === 'walk' && c.pos.x >= cp.x && (cp.minY === undefined || c.pos.y >= cp.minY) && (cp.maxY === undefined || c.pos.y <= cp.maxY));
-      if (hit) { this.setFlag('cp', i); break; }
+      if (hit) {
+        this.setFlag('cp', i);
+        const c = this.chars.find((q) => !q.puppet && q.pos.x >= cp.x) || this.chars[0];
+        this.fx.emit('sparkle', c.pos.x, c.pos.y + 0.4, 0.4, 12);
+        this.game.audio.checkpoint();
+        break;
+      }
     }
   }
 
@@ -916,6 +1203,15 @@ export class World {
 
   frame(dt, alpha) {
     this.stepRopes(dt);
+    for (const sl of this.slashes) {
+      if (sl.t >= sl.dur) { sl.m.visible = false; continue; }
+      sl.t += dt;
+      const k = Math.min(1, sl.t / sl.dur);
+      sl.m.visible = true;
+      sl.m.material.opacity = Math.sin(k * Math.PI) * 0.85;
+      sl.m.rotation.z = (k - 0.5) * 1.4 * Math.sign(sl.m.scale.x);
+    }
+    for (const pn of this.pianos) this.stepPiano(pn, dt);
     for (const c of this.chars) c.render(dt, alpha);
     for (const m of this.movers) m.render(alpha);
     for (const z of this.zones) {

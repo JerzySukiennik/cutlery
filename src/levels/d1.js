@@ -36,7 +36,7 @@ function flourBag(L) {
 }
 
 export default {
-  id: 2,
+  id: 'd1',
   chars: ['fork', 'knife'],
   lead: 'fork',
   music: 'ch2',
@@ -189,32 +189,23 @@ export default {
     S.face('knife', 1);
     S.hop('knife');
     await S.wait(1.2);
-    S.title('The Drawer', 'Chapter II', 4.2);
+    S.title('The Drawer', 'Fork & Knife · Chapter I', 4.2);
     await S.wait(2.6);
     S.release('fork'); S.release('knife');
     S.free();
   },
 
   async outro(S) {
-    const W = S.w;
     S.hold('fork'); S.hold('knife');
-    S.intensity(0.35);
-    S.cam(64, 13.3, 11, 0.2);
+    S.cam(64.5, 13.3, 10.5, 0.2);
+    await Promise.all([S.walk('fork', 62.8, 0.45, 1), S.walk('knife', 61.8, 0.45, 1)]);
     await S.wait(0.6);
-    await Promise.all([S.walk('fork', 62.6, 0.4, 1), S.walk('knife', 61.6, 0.4, 1)]);
-    await S.wait(1.2);
     S.hop('fork');
-    await S.wait(0.8);
+    await S.wait(0.6);
+    S.cam(66.2, 13.0, 9.5, 0.2);
+    await S.wait(1.1);
     S.face('fork', -1);
-    S.face('knife', 1);
+    S.ch('knife').anim.twang = 0.5;
     await S.wait(1.0);
-    S.cam(67, 13.1, 10, 0.2);
-    await S.wait(1.6);
-    S.face('fork', 1);
-    S.ch('knife').anim.twang = 0.4;
-    await S.wait(1.4);
-    S.cam(64, 12.5, 22, 1.2);
-    await S.wait(2.4);
-    await S.fade(true, 1600);
   },
 };

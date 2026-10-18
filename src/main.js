@@ -3,7 +3,7 @@ import { initPhysics } from './physics.js';
 import { Renderer } from './render.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
-import { UI, CHAPTERS } from './ui.js';
+import { UI, CHAPTERS, nextChapter } from './ui.js';
 import { World } from './world.js';
 import { Story } from './story.js';
 import { Net } from './net.js';
@@ -41,7 +41,8 @@ class Game {
     this.ui.progress(0.95, 'warming the kitchen');
     if (this.input.isTouch) { this.input.mountTouch(document.getElementById('touch')); document.body.classList.add('touch'); }
     requestAnimationFrame((t) => this.loop(t));
-    const ch = +params.get('ch');
+    const legacy = { 1: 'b1', 2: 'd1', 3: 't1' };
+    const ch = legacy[params.get('ch')] || params.get('ch');
     if (ch && LEVELS[ch]) { this.ui.hideLoading(); this.startSolo(ch, { skip: params.has('skip'), cp: +params.get('cp') || 0 }); }
     else { this.toMenu(); setTimeout(() => this.ui.hideLoading(), 300); }
     const room = params.get('room');
@@ -57,6 +58,9 @@ class Game {
     R.dof.aperture = def.aperture ?? 1.9;
     R.grade.warmth = def.warmth ?? 0.6;
     R.sun.intensity = def.sun ?? 3.4;
+    R.sun.color.set(def.sunColor || '#ffd09a');
+    R.fill.intensity = def.fill ?? 0.45;
+    R.grade.vignette = def.vignette ?? 0.9;
     R.hemi.intensity = def.hemi ?? 0.22;
     R.scene.environmentIntensity = def.env ?? 0.26;
     if (def.sunDir) R.sunDir.set(...def.sunDir).normalize();
@@ -71,7 +75,7 @@ class Game {
     this.ending = false;
     this.active = null;
     this.input.enabled = true;
-    document.body.classList.remove('playing');
+    document.body.classList.remove('playing', 'ended');
     this.loadWorld(LEVELS.menu, {});
     this.world.cam.story = { ...LEVELS.menu.cam };
     this.world.updateCamera(1, null, true);
@@ -106,10 +110,11 @@ class Game {
     this.state = 'play';
     this.ending = false;
     this.paused = false;
+    document.body.classList.remove('ended');
     document.body.classList.add('playing');
     this.ui.setHUD(this);
     this.world.updateCamera(1, this.active, true);
-    this.audio.startMusic(def.music || 'ch' + this.chapter);
+    this.audio.startMusic(def.music || 'ch1');
     this.audio.ambience(def.ambience || 'kitchen');
     await this.ui.fade(false, 900);
     if (!skipIntro && def.intro) await this.story.run(def.intro);
@@ -170,8 +175,11 @@ class Game {
     this.ui.clearHint();
     if (def.outro) await this.story.run(def.outro);
     this.ui.markDone(this.chapter);
-    const next = CHAPTERS.find((c) => c.id === this.chapter + 1);
+    const next = nextChapter(this.chapter);
     this.input.enabled = true;
+    this.audio.setIntensity(0.4);
+    const cs = this.story.lastCam;
+    if (cs) this.world.cam.story = { ...cs, yOff: (cs.yOff || 0) - cs.dist * 0.2 };
     this.ui.showEnd(this.chapter, next ? next.id : null);
   }
 

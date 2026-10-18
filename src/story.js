@@ -12,10 +12,12 @@ export class Story {
     if (!fn) return;
     this.running = true;
     this.skipping = false;
+    this.lastCam = null;
     this.g.ui.letterbox(true);
     this.g.input.enabled = true;
     try { await fn(this); } catch (e) { if (e !== 'skip') console.error(e); }
     for (const c of this.w.chars) if (c.state === 'script') { c.state = 'walk'; c.script = null; }
+    this.lastCam = this.w.cam.story;
     this.w.cam.story = null;
     this.g.ui.letterbox(false);
     this.running = false;
@@ -45,13 +47,14 @@ export class Story {
 
   async walk(kind, x, speed = 0.65, face) {
     const c = this.ch(kind);
-    if (!c || c.puppet) return;
+    if (!c || c.puppet || this.g.world !== this.w) return;
     c.state = 'script';
     c.script = { to: x, speed, face };
     if (this.skipping) { c.pos.x = x; c.prev.x = x; c.syncCol(); return; }
     await new Promise((res) => {
       const t0 = this.w.time;
       const chk = () => {
+        if (this.g.world !== this.w) { res(); return; }
         if (this.skipping) { c.pos.x = x; c.prev.x = x; c.syncCol(); res(); return; }
         if (Math.abs(c.pos.x - x) < 0.12 || this.w.time - t0 > 12 || this.g.world !== this.w) res(); else requestAnimationFrame(chk);
       };
@@ -62,7 +65,7 @@ export class Story {
 
   hold(kind, face) {
     const c = this.ch(kind);
-    if (!c || c.puppet) return;
+    if (!c || c.puppet || this.g.world !== this.w) return;
     c.state = 'script';
     c.script = { to: undefined };
     if (face) c.face = face;

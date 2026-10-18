@@ -38,7 +38,7 @@ function board(L, len) {
 }
 
 export default {
-  id: 3,
+  id: 't1',
   chars: ['fork', 'knife', 'butter'],
   lead: 'butter',
   music: 'ch3',
@@ -179,7 +179,7 @@ export default {
     S.cam(14, 12.2, 19, 0.3);
     S.face('butter', 1);
     await S.wait(0.6);
-    S.title('Breakfast', 'Chapter III', 4.2);
+    S.title('Breakfast', 'All three · Chapter I', 4.2);
     await S.wait(2.6);
     S.release('fork'); S.release('knife'); S.release('butter');
     S.free();
@@ -188,22 +188,16 @@ export default {
   async outro(S) {
     const W = S.w;
     S.hold('fork'); S.hold('knife'); S.hold('butter');
-    S.music('end');
-    S.cam(68, 11.2, 11, 0.2);
-    await Promise.all([S.walk('fork', 65.6, 0.4, 1), S.walk('knife', 70.6, 0.4, -1), S.walk('butter', 66.6, 0.45, 1)]);
+    S.cam(68, 11.0, 11, 0.2);
+    await Promise.all([S.walk('fork', 65.8, 0.45, 1), S.walk('knife', 70.4, 0.45, -1), S.walk('butter', 66.9, 0.5, 1)]);
     S.jump('butter');
-    await S.wait(0.3);
-    await S.walk('butter', 68.0, 0.4, 1);
-    await S.wait(0.8);
+    await S.walk('butter', 68.0, 0.45, 1);
+    await S.wait(0.4);
     S.hop('butter');
     S.ch('knife').anim.twang = 0.6;
-    await S.wait(1.0);
-    W.fx.emitBox('confetti', 62, 13, 12, 4, -2, 3, 40);
-    W.game.renderer.grade.warmth = 0.9;
-    S.cam(66, 12, 26, 1.0);
-    await S.wait(4.0);
-    S.title('Cutlery', 'thank you for playing', 4.5);
-    await S.wait(3.2);
-    await S.fade(true, 1800);
+    W.fx.emitBox('confetti', 63, 12, 10, 3, -2, 3, 30);
+    W.solve(68, 11.2);
+    S.cam(68, 11.6, 14, 0.3);
+    await S.wait(2.2);
   },
 };

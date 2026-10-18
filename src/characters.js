@@ -8,7 +8,7 @@ export const KINDS = {
   butter: { name: 'Butter', hw: 0.45, hh: 0.31, speed: 4.3, accel: 38, airAccel: 24, jump: 11.3, grav: 33, fall: 44, weight: 1, strength: 1 },
 };
 
-const STATE_CODE = { walk: 0, planted: 1, carried: 2, smear: 3, spread: 4, toast: 5, script: 6, respawn: 7, hidden: 8 };
+const STATE_CODE = { walk: 0, planted: 1, carried: 2, smear: 3, spread: 4, toast: 5, script: 6, respawn: 7, hidden: 8, seep: 9 };
 const CODE_STATE = Object.fromEntries(Object.entries(STATE_CODE).map(([k, v]) => [v, k]));
 
 const approach = (v, t, a) => (v < t ? Math.min(t, v + a) : Math.max(t, v - a));
@@ -116,6 +116,26 @@ function makeEyes(size = 1) {
   return g;
 }
 
+export function makeFigure(kind, scale = 1) {
+  sharedMats();
+  const g = new THREE.Group();
+  if (kind === 'fork') {
+    g.add(new THREE.Mesh(forkGeo(), metalMat));
+    const e = makeEyes(1); e.position.set(0, 1.37, 0.05); g.add(e);
+  } else if (kind === 'knife') {
+    for (const geo of knifeGeos()) g.add(new THREE.Mesh(geo, metalMat));
+    const e = makeEyes(1.05); e.position.set(0.012, 1.2, 0.03); g.add(e);
+  } else {
+    const geo = new RoundedBoxGeometry(0.9, 0.62, 0.66, 4, 0.11);
+    geo.translate(0, 0.31, 0);
+    g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#f7dc7c', roughness: 0.4, emissive: '#5a3c00', emissiveIntensity: 0.22 })));
+    const e = makeEyes(1.15); e.position.set(0, 0.38, 0.34); g.add(e);
+  }
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  g.scale.setScalar(scale);
+  return g;
+}
+
 export class Character {
   constructor(world, kind) {
     sharedMats();
@@ -200,6 +220,30 @@ export class Character {
       this.eyes = makeEyes(1.15);
       this.eyes.position.set(0, 0.38, 0.34);
       this.body.add(this.eyes);
+      this.oilMat = new THREE.MeshStandardMaterial({ color: '#f3c847', roughness: 0.05, metalness: 0, envMapIntensity: 2.6, emissive: '#6a4200', emissiveIntensity: 0.28 });
+      const blobGeo = new THREE.SphereGeometry(1, 18, 10);
+      this.puddle = new THREE.Group();
+      this.blobs = [];
+      for (let i = 0; i < 7; i++) {
+        const m = new THREE.Mesh(blobGeo, this.oilMat);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        const a = (i / 6) * Math.PI * 2;
+        const r = i === 0 ? 0 : 0.3;
+        this.blobs.push({ m, bx: Math.cos(a) * r, bz: Math.sin(a) * r * 0.6, rad: i === 0 ? 0.44 : 0.24 + (i % 3) * 0.04, ph: i * 1.7, ox: Math.cos(a) * r, oz: Math.sin(a) * r * 0.6 });
+        this.puddle.add(m);
+      }
+      this.drops = [];
+      for (let i = 0; i < 7; i++) {
+        const m = new THREE.Mesh(blobGeo, this.oilMat);
+        m.visible = false;
+        m.castShadow = true;
+        this.puddle.add(m);
+        this.drops.push({ m, on: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.07, age: 0 });
+      }
+      this.puddle.visible = false;
+      this.root.add(this.puddle);
+      this.dropT = 0;
     }
     this.world.scene.add(this.root);
   }
@@ -215,7 +259,6 @@ export class Character {
       return this.bottom >= m.top - 0.1 && this.vel.y <= 0.6;
     }
     if (m.item) return false;
-    if (m.grate && this.melted) return false;
     if (m.oneWay) return this.bottom >= m.top - 0.1 && this.vel.y <= 0.6;
     if (m.slope) return this.bottom >= m.slope.y0 + m.slope.k * (this.pos.x - m.slope.x0) - 0.3 - this.hw * Math.abs(m.slope.k) && this.vel.y <= 0.6;
     return true;
@@ -272,6 +315,7 @@ export class Character {
       case 'carried': this.carriedStep(dt, inp); break;
       case 'smear': case 'spread': this.smearStep(dt, inp); break;
       case 'toast': this.toastStep(dt); break;
+      case 'seep': this.seepStep(dt); break;
       case 'respawn': this.respawnStep(dt); break;
       case 'script': this.scriptStep(dt); break;
     }
@@ -280,6 +324,7 @@ export class Character {
 
   walk(dt, inp) {
     const d = this.def, w = this.world;
+    if (this.helpDir && !inp.x) inp = { ...inp, x: this.helpDir };
     let speed = d.speed, jump = d.jump;
     let accel = this.grounded ? d.accel : d.airAccel;
     if (this.kind === 'butter') {
@@ -293,14 +338,14 @@ export class Character {
       if (this.melted) this.setMeltShape(true);
     }
     if (this.held && this.held.kind === 'butter') speed *= 0.9;
-    const slick = this.grounded && w.slickAt(this.pos.x, this.bottom, this);
+    if (this.afloat) { speed *= 0.6; jump *= 0.8; }
+    const greasy = this.grounded && this.groundM && this.groundM.rot && this.kind === 'butter' && (this.melted || this.soft);
+    const slick = this.grounded && (w.slickAt(this.pos.x, this.bottom, this) || greasy);
     if (slick) { accel *= 0.2; speed *= 1.75; }
-    if (this.grounded && this.groundM && this.groundM.rot && this.kind === 'butter' && (this.melted || this.soft)) {
-      this.vel.x += -Math.sin(this.groundM.rot) * 26 * dt * (this.melted ? 1 : 0.35);
-    }
+    if (greasy) this.vel.x += -Math.sin(this.groundM.rot) * 30 * dt * (this.melted ? 1 : 0.7);
     const tx = inp.x * speed;
     let acc;
-    if (inp.x) acc = (this.vel.x !== 0 && Math.sign(tx) !== Math.sign(this.vel.x)) ? accel * 1.6 : accel;
+    if (inp.x) acc = (this.vel.x !== 0 && Math.sign(tx) !== Math.sign(this.vel.x)) ? accel * 1.6 : (!this.grounded && Math.abs(this.vel.x) > Math.abs(tx) ? 1.2 : accel);
     else acc = slick ? 1.2 : (this.grounded ? 60 : 4.5);
     this.vel.x = approach(this.vel.x, tx, acc * dt);
     if (inp.x) this.face = Math.sign(inp.x);
@@ -324,6 +369,8 @@ export class Character {
       this.vel.y = jump; this.coyote = 0; this.jbuf = 0; this.grounded = false; this.jumping = true;
       this.anim.squashV -= 7;
       w.sfx(this.kind === 'butter' ? 'squishSoft' : 'metalTick', this.pos.x, this.pos.y, 0.4);
+      w.effect(this.afloat ? 'splash' : 'puff', this.pos.x, this.bottom, this.kind === 'butter' ? 'butter' : '');
+      this.afloat = false;
     }
     if (this.vel.y <= 0) this.jumping = false;
     let cx = 0, cy = 0;
@@ -352,6 +399,21 @@ export class Character {
       this.air += dt;
     }
     if (this.vel.y > 0 && res.dy < want.y - 0.002 && !ground) this.vel.y = 0;
+    if (this.kind === 'butter' && w.can('float')) this.floatStep(dt);
+    if (this.grounded && Math.abs(this.vel.x) > 1 && !this.puppet) {
+      this.stepT = (this.stepT || 0) + dt * Math.abs(this.vel.x);
+      if (this.stepT > (this.kind === 'butter' ? 1.3 : 1.6)) {
+        this.stepT = 0;
+        const gm = this.groundM, mat = gm ? gm.mat : 'stone';
+        if (this.kind === 'butter') w.sfx(this.melted ? 'drip' : 'squishSoft', this.pos.x, this.pos.y, 0.12);
+        else w.sfx(mat === 'wood' || mat === 'cloth' ? 'wood' : 'metalTick', this.pos.x, this.pos.y, 0.1);
+        w.effect('step', this.pos.x - this.face * this.hw, this.bottom, this.kind === 'butter' ? 'butter' : '');
+      }
+    }
+    if (this.kind === 'butter' && this.melted && w.can('melt')) {
+      if (this.grounded && ground && ground.grate && ground.seep !== false) { if (this.startSeep('down', ground)) return; }
+      else if (wallM && wallM.grate && wallM.seep !== false && inp.x === this.wallDir) { if (this.startSeep(this.wallDir, wallM)) return; }
+    }
     this.pushing = null;
     if (this.wallDir && Math.abs(res.dx - want.x) > 0.0005) {
       const tgt = wallM && (wallM.box || wallM.toppler);
@@ -365,38 +427,113 @@ export class Character {
     if (inp.actionPressed && this.cool <= 0) this.action(inp);
   }
 
+  overlapsAt(x, y, shrink = 0.04) {
+    return this.world.phys.overlap(x, y, this.hw - shrink, this.hh - shrink, (m) => !m.char && !m.item && !m.oneWay && !m.slope && m !== this.meta).length > 0;
+  }
+
   depenetrate() {
-    const hits = this.world.phys.overlap(this.pos.x, this.pos.y, this.hw - 0.04, this.hh - 0.04, (m) => !m.char && !m.item && !m.oneWay && m !== this.meta && !(m.grate && this.melted));
-    if (!hits.length) { this.stuck = 0; return; }
+    if (!this.overlapsAt(this.pos.x, this.pos.y)) { this.stuck = 0; return; }
     this.stuck = (this.stuck || 0) + 1;
-    if (this.stuck > 3) { this.pos.y += 0.06; this.vel.y = Math.max(this.vel.y, 0); }
+    if (this.stuck < 3) return;
+    for (const [dx, dy] of [[0.06, 0], [-0.06, 0], [0.14, 0], [-0.14, 0], [0, 0.06], [0.3, 0], [-0.3, 0]]) {
+      if (!this.overlapsAt(this.pos.x + dx, this.pos.y + dy)) { this.pos.x += dx; this.pos.y += dy; this.stuck = 0; return; }
+    }
+    this.pos.y += 0.06;
+    this.vel.y = Math.max(this.vel.y, 0);
+  }
+
+  floatStep(dt) {
+    const w = this.world, wat = w.waterAt(this.pos.x);
+    if (!wat) { this.afloat = false; return; }
+    const ty = wat.y - (this.melted ? 0.04 : this.hh * 0.5) + this.hh;
+    if (this.pos.y < ty) {
+      if (!this.afloat && this.vel.y < -3) { w.sfx('splash', this.pos.x, wat.y, 0.7); w.effect('splash', this.pos.x, wat.y); }
+      this.afloat = true;
+      this.pos.y = ty;
+      if (this.vel.y < 0) this.vel.y = 0;
+      this.grounded = true;
+      this.coyote = 0.1;
+    } else if (this.pos.y > ty + 0.08) this.afloat = false;
+  }
+
+  startSeep(dir, m) {
+    const w = this.world;
+    const c = m.collider.translation();
+    let x1 = this.pos.x, y1 = this.pos.y;
+    const free = (x, y) => !w.phys.overlap(x, y, Math.max(0.2, this.hw * 0.6), this.hh - 0.02, (o) => !o.char && !o.item && !o.oneWay && o !== this.meta).length;
+    if (dir === 'down') {
+      y1 = c.y - m.hh - this.hh - 0.03;
+      const lo = c.x - m.hw + 0.2, hi = c.x + m.hw - 0.2;
+      x1 = Math.max(lo, Math.min(hi, this.pos.x));
+      if (!free(x1, y1)) {
+        let found = false;
+        for (let k = 1; k <= 12 && !found; k++) for (const sg of [-1, 1]) { const tx = x1 + sg * k * 0.12; if (tx >= lo && tx <= hi && free(tx, y1)) { x1 = tx; found = true; break; } }
+        if (!found) return false;
+      }
+    } else {
+      x1 = dir > 0 ? c.x + m.hw + this.hw + 0.03 : c.x - m.hw - this.hw - 0.03;
+      if (!free(x1, y1)) return false;
+    }
+    this.state = 'seep';
+    this.seep = { dir, x0: this.pos.x, y0: this.pos.y, x1, y1, t: 0, dur: dir === 'down' ? 1.15 : 1.35, gap: m.gap || 0.26, gx0: m.gx0 ?? (c.x - m.hw), gl: c.x - m.hw, gr: c.x + m.hw, gt: c.y + m.hh, gb: c.y - m.hh, acc: 0 };
+    this.vel.x = this.vel.y = 0;
+    this.syncCol();
+    w.sfx('drip', this.pos.x, this.pos.y, 0.6);
+    return true;
+  }
+
+  seepStep(dt) {
+    const s = this.seep, w = this.world;
+    if (!s) { this.state = 'walk'; this.syncCol(); return; }
+    s.t += dt;
+    s.acc += dt * 26 * Math.sin(Math.min(1, s.t / s.dur) * Math.PI);
+    while (s.acc > 1) { s.acc -= 1; w.seepDrip(s, this); }
+    if (Math.random() < dt * 6) w.sfx('drip', this.pos.x, this.pos.y, 0.22);
+    if (s.t >= s.dur) {
+      this.pos.x = s.x1; this.pos.y = s.y1;
+      this.prev.x = s.x1; this.prev.y = s.y1;
+      this.state = 'walk';
+      this.vel.x = s.dir === 'down' ? 0 : s.dir * 1.2;
+      this.vel.y = -0.5;
+      this.grounded = false;
+      this.regrow = 0;
+      this.seep = null;
+      this.syncCol();
+      w.sfx('squish', this.pos.x, this.pos.y, 0.5);
+    }
   }
 
   onLand(v, inp) {
     const w = this.world;
     const gm = this.groundM;
     if (gm && gm.spring && v > 3.2) {
-      this.vel.y = inp.jump ? 17.2 : 11.5;
+      const pw = gm.springPower || [11.5, 17.2];
+      this.vel.y = inp.jump ? pw[1] : pw[0];
       this.grounded = false; this.jumping = inp.jump;
-      gm.char.anim.twang = 1;
-      w.sfx('twang', this.pos.x, this.pos.y, 0.8);
-      this.anim.squashV += 8;
+      if (gm.char) { gm.char.anim.twang = 1; w.sfx('twang', this.pos.x, this.pos.y, 0.8); }
+      if (gm.onBounce) gm.onBounce(w, this);
+      this.anim.squashV -= 10;
+      w.effect('bounce', this.pos.x, this.bottom);
+      w.shake(0.08);
       return;
     }
+    if (gm && gm.onLand) gm.onLand(w, this, v);
     if (v > 2) {
       this.anim.squashV += Math.min(14, v * 0.9);
       const mat = gm ? gm.mat : 'stone';
       const vol = Math.min(1, v / 16);
-      if (this.kind === 'butter') w.sfx(this.hard ? 'plate' : 'squish', this.pos.x, this.pos.y, 0.35 + vol * 0.6);
+      if (this.kind === 'butter') w.sfx(this.melted ? 'drip' : this.hard ? 'plate' : 'squish', this.pos.x, this.pos.y, 0.35 + vol * 0.6);
       else w.sfx(mat === 'wood' || mat === 'cloth' ? 'wood' : mat === 'soft' ? 'soft' : mat === 'glass' || mat === 'ceramic' ? 'plate' : 'metal', this.pos.x, this.pos.y, 0.25 + vol * 0.6);
-      if (v > 9) w.effect('dust', this.pos.x, this.bottom, this.kind === 'butter' ? 'butter' : 'dust');
+      if (v > 4.5) w.effect('land', this.pos.x, this.bottom, this.kind === 'butter' ? 'butter' : '', v);
+      if (this.kind === 'butter' && v > 6) this.splash = 1;
+      if (v > 13) w.shake(0.06);
     }
   }
 
   blockedAbove(hh) {
     const need = hh - this.hh;
     if (need <= 0.01) return false;
-    const hits = this.world.phys.overlap(this.pos.x, this.bottom + hh + 0.02, this.hw * 0.8, hh - 0.04, (m) => !m.char && !m.item && !m.oneWay && !(m.grate && this.melted));
+    const hits = this.world.phys.overlap(this.pos.x, this.bottom + hh + 0.02, this.hw * 0.8, hh - 0.04, (m) => !m.char && !m.item && !m.oneWay && !m.slope);
     return hits.length > 0;
   }
 
@@ -420,6 +557,9 @@ export class Character {
     const b = this.bottom;
     this.hh = wantHH; this.hw = wantHW;
     this.pos.y = b + this.hh;
+    if (this.overlapsAt(this.pos.x, this.pos.y)) {
+      for (const dx of [0.08, -0.08, 0.16, -0.16, 0.24, -0.24]) if (!this.overlapsAt(this.pos.x + dx, this.pos.y)) { this.pos.x += dx; break; }
+    }
     this.syncCol();
   }
 
@@ -436,12 +576,12 @@ export class Character {
     this.melted = this.melted ? this.temp > 0.8 : this.temp > 0.93;
     if (!w.can('melt')) this.melted = false;
     if (this.melted !== wasMelted) {
-      if (this.melted) { this.setSquish(false); this.setMeltShape(true); w.sfx('sizzle', this.pos.x, this.pos.y, 0.6); w.hint(this, 'melted', 'Melted. You can seep through grates now.'); }
+      if (this.melted) { this.setSquish(false); this.setMeltShape(true); w.sfx('sizzle', this.pos.x, this.pos.y, 0.6); w.effect('steam', this.pos.x, this.pos.y); w.hint(this, 'melted', 'Melted. You can pour through grates now.'); }
       else this.setMeltShape(false);
       if (!this.melted && (this.hh < 0.1)) { this.melted = true; }
     }
     if (this.hard !== wasHard) {
-      if (this.hard) { w.sfx('crack', this.pos.x, this.pos.y, 0.5); }
+      if (this.hard) { w.sfx('crack', this.pos.x, this.pos.y, 0.5); w.effect('frostBurst', this.pos.x, this.pos.y); }
     }
   }
 
@@ -458,7 +598,7 @@ export class Character {
     this.anim.stab = 1;
     if (this.held) {
       if (inp.down) this.throwHeld(dir * 1.5, 1.5);
-      else this.throwHeld(dir * 6.4 + this.vel.x * 0.4, 9.8);
+      else this.throwHeld(dir * 6.4 + this.vel.x * 0.4, 11.2);
       return;
     }
     if (!w.can('stab')) return;
@@ -474,6 +614,7 @@ export class Character {
     if (hit && (hit.m.mat === 'soft' || hit.m.food)) {
       if (hit.m.smearWall && !w.can('bridge')) return;
       this.plantInto(hit, dir);
+      w.shake(0.06);
       w.sfx(hit.m.smearWall ? 'squish' : 'stab', hit.x, hit.y, 0.8);
       w.effect('crumbs', hit.x, hit.y, hit.m.smearWall ? 'butter' : hit.m.food === 'cheese' ? 'cheese' : 'bread');
       return;
@@ -489,6 +630,7 @@ export class Character {
     const w = this.world, dir = this.face;
     if (!w.can('cut')) return;
     this.anim.swing = 1;
+    w.slash(this.pos.x + dir * 0.45, this.pos.y + 0.35, dir);
     const cx = this.pos.x + dir * 0.75, cy = this.pos.y;
     if (w.tryCut(this, cx, cy, 0.75, this.hh + 0.2)) return;
     if (w.can('spread')) {
@@ -499,6 +641,7 @@ export class Character {
       const hit = w.phys.cast(this.pos.x, this.pos.y + 0.3, dir, 0, this.hw + 0.7, (m) => !m.item && !m.box && !m.char && !m.oneWay && !m.grate);
       if (hit && hit.m.mat === 'wood') {
         this.plantInto(hit, dir);
+        w.shake(0.07);
         w.sfx('thunk', hit.x, hit.y, 0.9);
         w.effect('chips', hit.x, hit.y, 'wood');
         return;
@@ -720,12 +863,15 @@ export class Character {
 
   toastStep(dt) {
     this.toastT -= dt;
+    this.toastSink = Math.min(1, (this.toastSink || 0) + dt / 0.6);
     const t = this.toaster;
-    if (t) { this.pos.x = t.slotX; this.pos.y = t.y + this.hh; }
+    if (t) { this.pos.x = t.slotX; this.pos.y = t.top + this.hh - this.toastSink * (this.hh * 2 + 0.2); }
     if (this.toastT <= 0) {
       this.state = 'walk';
       this.pos.y = t.top + this.hh + 0.1;
+      this.prev.y = t.top - this.hh;
       this.vel.y = t.power || 19.5;
+      this.anim.squashV -= 14;
       this.vel.x = (t.push || 0);
       this.jumping = false;
       this.grounded = false;
@@ -738,7 +884,8 @@ export class Character {
   enterToaster(t) {
     this.state = 'toast';
     this.toaster = t;
-    this.toastT = t.delay || 1.8;
+    this.toastSink = 0;
+    this.toastT = (t.delay || 1.8) + 0.6;
     this.vel.x = this.vel.y = 0;
     if (this.held) this.releaseHeld();
     this.syncCol();
@@ -769,13 +916,15 @@ export class Character {
       if (this.kind === 'butter') { this.temp = sp.temp ?? this.world.ambientAt(sp.x, sp.y); this.melted = false; this.hard = this.temp < 0.2; this.hw = KINDS.butter.hw; this.hh = KINDS.butter.hh; this.squish = false; this.place(sp.x, sp.y, sp.face || 1); }
       this.anim.squashV += 10;
       this.world.effect('poof', this.pos.x, this.pos.y, this.kind);
+      this.world.effect('sparkle', this.pos.x, this.pos.y);
     }
   }
 
   hazards() {
     if (this.state === 'respawn' || this.state === 'hidden') return;
     const w = this.world;
-    if (this.pos.y < w.killY(this.pos.x) || w.inWater(this.pos.x, this.bottom + 0.1)) this.die();
+    const drown = w.inWater(this.pos.x, this.bottom + 0.1) && !(this.kind === 'butter' && w.can('float'));
+    if (this.pos.y < w.killY(this.pos.x) || drown) this.die();
   }
 
   die() {
@@ -797,6 +946,8 @@ export class Character {
     if (this.carrier) s.c = this.carrier.kind;
     if (this.pushing) s.pu = [this.pushing.id, this.pushing.dir, this.pushing.s];
     if (this.held && this.held.id) s.h = this.held.id;
+    if (this.seep) s.sp = [+this.seep.x0.toFixed(2), +this.seep.y0.toFixed(2), +this.seep.x1.toFixed(2), +this.seep.y1.toFixed(2), this.seep.dir === 'down' ? 0 : this.seep.dir, +this.seep.t.toFixed(2), +this.seep.dur.toFixed(2)];
+    if (this.toaster) s.ts = +(this.toastSink || 0).toFixed(2);
     if (this.anim.stab > 0.5) s.a = 1;
     if (this.anim.swing > 0.5) s.a = 2;
     return s;
@@ -819,6 +970,8 @@ export class Character {
     this.carrier = s.c ? this.world.charByKind(s.c) : null;
     this.pushing = s.pu ? { id: s.pu[0], dir: s.pu[1], s: s.pu[2] } : null;
     this.heldId = s.h || null;
+    this.seep = s.sp ? { x0: s.sp[0], y0: s.sp[1], x1: s.sp[2], y1: s.sp[3], dir: s.sp[4] === 0 ? 'down' : s.sp[4], t: s.sp[5], dur: s.sp[6] } : null;
+    this.toastSink = s.ts ?? this.toastSink;
     if (s.a === 1 && this.anim.stab < 0.2) this.anim.stab = 1;
     if (s.a === 2 && this.anim.swing < 0.2) this.anim.swing = 1;
     this.syncCol();
@@ -831,7 +984,7 @@ export class Character {
     const tgt = this.state === 'carried' && this.carrier ? this.carrier.heldPos(this, true) : null;
     if (tgt) this.rpos.set(tgt.x, tgt.y);
     else this.rpos.set(this.prev.x + (this.pos.x - this.prev.x) * alpha, this.prev.y + (this.pos.y - this.prev.y) * alpha);
-    const vis = this.state !== 'toast' && this.state !== 'hidden' && !(this.state === 'respawn' && this.respawnT < 0.9);
+    const vis = !(this.state === 'toast' && (this.toastSink || 0) >= 1) && this.state !== 'hidden' && !(this.state === 'respawn' && this.respawnT < 0.9);
     this.root.visible = this.visible && vis;
     if (!this.root.visible) return;
     a.squashV += (-a.squash * 220 - a.squashV * 14) * dt;
@@ -944,8 +1097,74 @@ export class Character {
     this.butterMat.emissiveIntensity = this.hard ? 0.08 : 0.22;
     const ey = 0.38 * (1 - sag * 0.15) * (1 - 0.8 * melt);
     this.eyes.position.set(wob * 0.35 * (ey / 0.62), Math.max(0.1, ey), 0.34 * (1 + 0.45 * melt) + 0.01);
+    const liquid = (this.melted || this.state === 'seep') && a.melt > 0.55;
+    this.butterMesh.visible = !liquid;
+    this.puddle.visible = liquid;
+    if (liquid) this.renderPuddle(dt);
+    if (this.afloat) { this.body.position.y += Math.sin(this.t * 2.2) * 0.03; this.body.rotation.z += Math.sin(this.t * 1.7) * 0.05; }
     this.eyes.scale.x = 1 / Math.max(0.3, this.body.scale.x) * (this.state === 'spread' ? 1 : 1);
     this.eyes.scale.y *= 1 / Math.max(0.2, this.body.scale.y) * (this.state === 'spread' ? 0.25 : this.state === 'smear' ? (this.smear && this.smear.kind === 'wall' ? 0.75 : 0.35) : 1) * (this.squish ? 0.6 : 1);
+  }
+
+  renderPuddle(dt) {
+    const a = this.anim, t = this.t;
+    this.body.scale.set(1, 1, 1);
+    this.body.rotation.set(0, 0, 0);
+    this.body.position.set(0, 0, 0);
+    let scale = 1, shiftX = 0, squashY = 1;
+    const sp = this.seep;
+    if (this.state === 'seep' && sp) {
+      const k = Math.min(1, sp.t / sp.dur);
+      const e = k * k * (3 - 2 * k);
+      if (sp.dir === 'down') { scale = 1 - e * 0.95; squashY = 1 - e * 0.5; }
+      else { scale = 1 - e * 0.85; shiftX = sp.dir * e * 0.35; squashY = 0.8; }
+    }
+    if (this.regrow !== undefined && this.regrow < 1) { this.regrow = Math.min(1, this.regrow + dt / 0.35); scale *= 0.35 + 0.65 * this.regrow; }
+    const v = this.vel.x;
+    const stretch = Math.min(1, Math.abs(v) / 3);
+    const k = 1 - Math.exp(-dt * 9);
+    const airT = this.grounded || this.afloat || this.state === 'seep' || this.state === 'carried' ? 0 : 1;
+    this.airBlob = (this.airBlob || 0) + (airT - (this.airBlob || 0)) * Math.min(1, dt * 10);
+    const ab = this.airBlob;
+    for (const b of this.blobs) {
+      const tx = b.bx * (1 + stretch * 0.7) - v * 0.06 * (1 + b.bx * Math.sign(v || 1) * 1.5) + Math.sin(t * 2.1 + b.ph) * 0.035;
+      const tz = b.bz + Math.cos(t * 1.7 + b.ph) * 0.03;
+      b.ox += (tx - b.ox) * k;
+      b.oz += (tz - b.oz) * k;
+      const r = b.rad * (1 + Math.sin(t * 3 + b.ph) * 0.06) * scale * (1 - ab * 0.4);
+      const h = (0.075 + Math.sin(t * 2.6 + b.ph * 1.3) * 0.012) * squashY * Math.max(0.3, scale) * (1 + ab * 2.6) * (1 + Math.max(0, -this.vel.y) * 0.02 * ab);
+      b.m.scale.set(r * (1 + stretch * 0.25), h, r * 0.85);
+      b.m.position.set(b.ox * scale * (1 - ab * 0.5) + shiftX, h * 0.75 + ab * 0.12, b.oz * scale * (1 - ab * 0.5));
+    }
+    this.dropT -= dt * (0.9 + Math.abs(v) * 0.7 + (this.state === 'seep' ? 4 : 0));
+    let burst = this.splash ? 5 : 0;
+    this.splash = 0;
+    if (this.dropT <= 0) { this.dropT = 0.6 + Math.random() * 1.2; burst = Math.max(burst, 1); }
+    for (const d of this.drops) {
+      if (burst > 0 && !d.on) {
+        burst--;
+        const ang = Math.random() * Math.PI * 2;
+        d.on = true; d.age = 0;
+        d.x = Math.cos(ang) * 0.35 * scale; d.z = Math.sin(ang) * 0.2; d.y = 0.08;
+        const sp2 = 0.9 + Math.random() * 1.1 + (this.splash ? 1 : 0);
+        d.vx = Math.cos(ang) * sp2 - v * 0.2; d.vz = Math.sin(ang) * sp2 * 0.5; d.vy = 1.5 + Math.random() * 1.6;
+        d.r = 0.05 + Math.random() * 0.045;
+      }
+      if (!d.on) { d.m.visible = false; continue; }
+      d.age += dt;
+      d.vy -= 9 * dt;
+      if (d.y < 0.3 && d.vy < 0) { d.vx += -d.x * 14 * dt; d.vz += -d.z * 14 * dt; d.vx *= Math.exp(-3 * dt); d.vz *= Math.exp(-3 * dt); }
+      d.x += d.vx * dt; d.y += d.vy * dt; d.z += d.vz * dt;
+      if (d.y < d.r) { d.y = d.r; d.vy = Math.abs(d.vy) * 0.25; }
+      const dist = Math.hypot(d.x, d.z);
+      if ((dist < 0.32 * Math.max(0.4, scale) && d.y < 0.2 && d.age > 0.25) || d.age > 3) { d.on = false; d.m.visible = false; continue; }
+      d.m.visible = true;
+      const st = 1 + Math.min(0.6, Math.abs(d.vy) * 0.08);
+      d.m.scale.set(d.r / st, d.r * st, d.r / st);
+      d.m.position.set(d.x, d.y, d.z);
+    }
+    this.eyes.position.set(shiftX + v * 0.02, 0.15 * Math.max(0.3, squashY * scale) + 0.02, 0.24 * scale + 0.05);
+    this.eyes.scale.set(scale, (a.blink > 0 ? 0.12 : 1) * scale, 1);
   }
 
   dispose() {

@@ -20,6 +20,11 @@ export class Physics {
     this.cc.enableSnapToGround(0.18);
     this.cc.setSlideEnabled(true);
     this.cc.setApplyImpulsesToDynamicBodies(false);
+    this.ccBox = this.world.createCharacterController(0.01);
+    this.ccBox.setUp({ x: 0, y: 1 });
+    this.ccBox.setMaxSlopeClimbAngle(30 * Math.PI / 180);
+    this.ccBox.setSlideEnabled(true);
+    this.ccBox.setApplyImpulsesToDynamicBodies(false);
     this.ray = new R.Ray({ x: 0, y: 0 }, { x: 1, y: 0 });
   }
 
@@ -55,18 +60,19 @@ export class Physics {
 
   metaOf(c) { return c ? this.meta.get(c.handle) : null; }
 
-  move(c, dx, dy, pred) {
-    this.cc.computeColliderMovement(c, { x: dx, y: dy }, R.QueryFilterFlags.EXCLUDE_SENSORS, undefined, (o) => {
+  move(c, dx, dy, pred, box = false) {
+    const cc = box ? this.ccBox : this.cc;
+    cc.computeColliderMovement(c, { x: dx, y: dy }, R.QueryFilterFlags.EXCLUDE_SENSORS, undefined, (o) => {
       if (o.handle === c.handle) return false;
       const m = this.meta.get(o.handle);
       if (!m || m.off) return false;
       return pred ? pred(m, o) : true;
     });
-    const mv = this.cc.computedMovement();
-    const out = { dx: mv.x, dy: mv.y, grounded: this.cc.computedGrounded(), hits: [] };
-    const n = this.cc.numComputedCollisions();
+    const mv = cc.computedMovement();
+    const out = { dx: mv.x, dy: mv.y, grounded: cc.computedGrounded(), hits: [] };
+    const n = cc.numComputedCollisions();
     for (let i = 0; i < n; i++) {
-      const h = this.cc.computedCollision(i);
+      const h = cc.computedCollision(i);
       if (!h || !h.collider) continue;
       const m = this.meta.get(h.collider.handle);
       if (m) out.hits.push({ m, nx: h.normal1.x, ny: h.normal1.y });

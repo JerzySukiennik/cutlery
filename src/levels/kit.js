@@ -111,7 +111,7 @@ export function wireRack(L, x, y, w) {
   b.add(mesh(bx(0.05, 0.05, 2.2), M.chrome, x + w, y - 0.06, -0.6), true);
   const plate = mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.06, 28), M.ceramic, x + w * 0.5, y + 0.7, -1.4, { rx: Math.PI / 2 - 0.2 });
   b.add(plate, true);
-  b.col(x, y - 0.2, w, 0.2, 'grate', { grate: true });
+  b.col(x, y - 0.2, w, 0.2, 'grate', { grate: true, gap: w / n, gx0: x });
 }
 
 export function iceCubes(L, x0, x1, y) {

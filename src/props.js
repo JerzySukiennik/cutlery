@@ -205,9 +205,10 @@ export class Builder {
     }
   }
 
-  window(x, y, w, h, z = -3.5) {
+  window(x, y, w, h, z = -3.5, o = {}) {
     const m = this.m;
-    this.add(mesh(new THREE.PlaneGeometry(w * 1.8, h * 1.8), m.sky, x + w / 2, y + h / 2, z - 3, { cast: false, receive: false }));
+    if (o.night && !m.nightSky) m.nightSky = new THREE.MeshBasicMaterial({ map: T.nightSky(), toneMapped: true });
+    this.add(mesh(new THREE.PlaneGeometry(w * 1.8, h * 1.8), o.night ? m.nightSky : m.sky, x + w / 2, y + h / 2, z - 3, { cast: false, receive: false }));
     const fr = 0.3;
     this.add(mesh(bx(w + fr * 2, fr, 0.6), m.plastic, x + w / 2, y + h + fr / 2, z));
     this.add(mesh(bx(w + fr * 2, fr, 0.6), m.plastic, x + w / 2, y - fr / 2, z));
@@ -216,7 +217,7 @@ export class Builder {
     this.add(mesh(bx(0.16, h, 0.4), m.plastic, x + w / 2, y + h / 2, z));
     this.add(mesh(bx(w, 0.16, 0.4), m.plastic, x + w / 2, y + h * 0.62, z));
     this.add(mesh(rbox(w + 1.2, 0.3, 1.4, 0.05), m.stone, x + w / 2, y - 0.25, z + 0.6));
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < (o.night ? 0 : 3); i++) {
       const sh = mesh(new THREE.PlaneGeometry(w * (0.4 + i * 0.15), 26), m.shaft, x + w * (0.3 + i * 0.25) + 5, y + h * 0.5 - 9, z + 3 + i, { cast: false, receive: false });
       sh.rotation.z = 0.62;
       sh.renderOrder = 5;
@@ -434,7 +435,7 @@ export class Builder {
     gr.add(mesh(bx(w, 0.06, 0.06), m.chrome, w / 2, h, 1.2));
     gr.add(mesh(bx(w, 0.06, 0.06), m.chrome, w / 2, h, -1.2));
     for (const lx of [0.1, w - 0.1]) gr.add(mesh(bx(0.07, h, 0.07), m.chrome, lx, h / 2, 1.2));
-    this.col(x, y + h - 0.12, w, 0.14, 'grate', { grate: true });
+    this.col(x, y + h - 0.12, w, 0.14, 'grate', { grate: true, gap: w / n, gx0: x });
     return gr;
   }
 
@@ -476,7 +477,7 @@ export class Builder {
       this.add(mesh(bx(2.2, 0.12, 0.12), m.iron, cx, y + 0.3, 0));
     }
     this.col(x, y - 3, w, 3, 'metal');
-    this.col(x + 0.2, y, w - 0.4, 0.3, 'grate', { grate: true });
+    this.col(x + 0.2, y, w - 0.4, 0.3, 'grate', { grate: true, seep: false });
     return glows;
   }
 

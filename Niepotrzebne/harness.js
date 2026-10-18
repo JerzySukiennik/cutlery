@@ -50,3 +50,20 @@ window.snap = async (name) => {
   await fetch('/snap?name=' + name, { method: 'POST', body: url });
   return name;
 };
+
+window.climb = (kind, dir, targetY, maxT = 8, over = 0) => {
+  const c = game.world.charByKind(kind);
+  let last = -1, phase = 0;
+  const n = Math.round(maxT * 60);
+  for (let i = 0; i < n; i++) {
+    const t = i / 60;
+    const inp = { x: dir };
+    if (c.pos.y - c.hh > targetY) { inp.x = over || dir; inp.jump = true; }
+    else if (c.state === 'planted') { if (t - last > 0.12) { inp.jumpPressed = true; inp.jump = true; last = t; } }
+    else if (c.grounded) { if (t - last > 0.15) { inp.jumpPressed = true; inp.jump = true; last = t; c.face = dir; } }
+    else { inp.jump = true; if (c.vel.y < 2.0 && c.cool <= 0 && t - last > 0.1) { inp.actionPressed = true; last = t; } }
+    sim2(1 / 60, () => ({ [kind]: inp }));
+    if (c.pos.y - c.hh > targetY + 0.3 && c.grounded) break;
+  }
+  return [kind, +c.pos.x.toFixed(2), +c.pos.y.toFixed(2), c.state];
+};

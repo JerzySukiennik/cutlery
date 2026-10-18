@@ -4,7 +4,7 @@ import { mesh, rbox, bx } from '../props.js';
 import { backdrop, shadowCaster, eggCarton, bottle, lettuce, carrot, hutch, wallShelf, wireRack, iceCubes, soapRack, slotTray } from './kit.js';
 
 export default {
-  id: 1,
+  id: 'b1',
   chars: ['butter'],
   lead: 'butter',
   music: 'ch1',
@@ -177,30 +177,25 @@ export default {
     await S.wait(0.6);
     S.cam(6.0, 13.2, 15, 0.2);
     await S.walk('butter', 7.7, 0.45);
-    S.title('Cold Start', 'Chapter I', 4.2);
+    S.title('Cold Start', 'Butter · Chapter I', 4.2);
     await S.wait(2.4);
     S.release('butter');
     S.free();
   },
 
   async outro(S) {
-    const W = S.w, bu = S.ch('butter');
+    const bu = S.ch('butter');
     S.hold('butter');
-    S.intensity(0.3);
-    S.cam(55, 7.6, 11.5, 0.2);
-    await S.wait(1.2);
-    await S.walk('butter', 53.9, 0.35, 1);
-    await S.wait(1.1);
+    S.cam(55, 7.8, 11, 0.2);
+    await S.walk('butter', 54.0, 0.4, 1);
+    await S.wait(0.5);
     S.hop('butter');
-    await S.walk('butter', 55.6, 0.35, 1);
-    await S.wait(1.3);
+    await S.wait(0.7);
     S.face('butter', -1);
-    await S.wait(0.8);
+    await S.wait(0.5);
     S.face('butter', 1);
-    bu.anim.blink = 0.6;
-    await S.wait(1.0);
-    S.cam(50, 10.5, 24, 1.2);
-    await S.wait(3.0);
-    await S.fade(true, 1600);
+    bu.anim.blink = 0.5;
+    S.cam(54.6, 8.6, 15, 0.4);
+    await S.wait(1.6);
   },
 };

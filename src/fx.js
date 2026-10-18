@@ -37,6 +37,19 @@ const PRESETS = {
   mote: { n: 1, col: ['#fff1d2'], life: [6, 10], size: [0.06, 0.12], v: [0.15, 0.1], g: 0, drag: 0, alpha: 0.6, up: 0.05, add: true },
   sizzle: { n: 3, col: ['#fff3c8'], life: [0.3, 0.6], size: [0.06, 0.1], v: [1.4, 1.6], g: -2, drag: 1, alpha: 0.8, up: 1.2, add: true },
   splash: { n: 14, col: ['#cfe3ea', '#ffffff'], life: [0.4, 0.8], size: [0.1, 0.18], v: [2.5, 3.5], g: 18, drag: 0.5, alpha: 0.85, up: 2.2 },
+  sparkle: { n: 8, col: ['#fff6d6', '#ffe9a8', '#ffffff'], life: [0.35, 0.8], size: [0.07, 0.16], v: [2.6, 2.6], g: 2, drag: 2.5, alpha: 1, up: 1.2, twinkle: true },
+  puff: { n: 4, col: ['#e9dcc6', '#f3ead9'], life: [0.3, 0.5], size: [0.16, 0.26], v: [1.2, 0.3], g: -0.5, drag: 5, alpha: 0.45, up: 0.2 },
+  butterPuff: { n: 4, col: ['#f6d76b', '#fbe7a1'], life: [0.3, 0.55], size: [0.07, 0.12], v: [1.6, 1.2], g: 12, drag: 1.5, alpha: 0.9, up: 1.2 },
+  step: { n: 2, col: ['#e2d3bb'], life: [0.25, 0.4], size: [0.1, 0.16], v: [0.5, 0.2], g: -0.3, drag: 5, alpha: 0.35, up: 0.15 },
+  butterStep: { n: 1, col: ['#f6d76b'], life: [0.3, 0.5], size: [0.05, 0.08], v: [0.6, 0.6], g: 10, drag: 1, alpha: 0.9, up: 0.8 },
+  ring: { n: 1, col: ['#efe3cf', '#e2d3bb'], life: [0.35, 0.6], size: [0.14, 0.24], v: [0, 0], g: -0.4, drag: 4.5, alpha: 0.55, up: 0.25 },
+  butterRing: { n: 1, col: ['#f6d76b', '#fbe7a1'], life: [0.3, 0.5], size: [0.07, 0.12], v: [0, 0], g: 9, drag: 2.5, alpha: 0.95, up: 1.1 },
+  steamPuff: { n: 8, col: ['#ffffff', '#f4efe8'], life: [0.7, 1.3], size: [0.35, 0.7], v: [1.0, 0.6], g: -2.2, drag: 2.2, alpha: 0.35, up: 1.2 },
+  frostBurst: { n: 14, col: ['#dff1ff', '#ffffff', '#bfe0ff'], life: [0.4, 0.9], size: [0.05, 0.11], v: [3, 3], g: 3, drag: 2.5, alpha: 1, up: 0.8 },
+  drip: { n: 1, col: ['#f3c847', '#f6d76b'], life: [0.5, 0.8], size: [0.07, 0.11], v: [0.05, 0.1], g: 22, drag: 0.2, alpha: 1, up: -1.2 },
+  dripRight: { n: 1, col: ['#f3c847', '#f6d76b'], life: [0.35, 0.55], size: [0.06, 0.1], v: [0.1, 0.3], g: 10, drag: 0.5, alpha: 1, up: 0, vx: 3.2 },
+  dripLeft: { n: 1, col: ['#f3c847', '#f6d76b'], life: [0.35, 0.55], size: [0.06, 0.1], v: [0.1, 0.3], g: 10, drag: 0.5, alpha: 1, up: 0, vx: -3.2 },
+  note: { n: 1, col: ['#fff2cf', '#f6d76b', '#ffffff'], life: [0.9, 1.4], size: [0.16, 0.24], v: [0.3, 0.1], g: -1.6, drag: 1.2, alpha: 0.9, up: 0.5, twinkle: true },
   confetti: { n: 1, col: ['#f6d76b', '#ffffff', '#9fb6e0', '#f3c4a6'], life: [3, 5], size: [0.12, 0.2], v: [0.6, 0.3], g: 0.8, drag: 0.4, alpha: 0.9, up: 0 },
 };
 
@@ -68,10 +81,22 @@ export class FX {
       this.c.set(col);
       this.p.push({
         x: x + (Math.random() - 0.5) * 0.2, y: y + (Math.random() - 0.5) * 0.15, z: z + (Math.random() - 0.5) * 0.6,
-        vx: (Math.random() - 0.5) * P.v[0] * 2, vy: (Math.random() - 0.3) * P.v[1] + P.up, vz: (Math.random() - 0.5) * P.v[0],
+        vx: (Math.random() - 0.5) * P.v[0] * 2 + (P.vx || 0), vy: (Math.random() - 0.3) * P.v[1] + P.up, vz: (Math.random() - 0.5) * P.v[0],
         life: r(P.life), age: 0, size: r(P.size), g: P.g, drag: P.drag, a: P.alpha, r: this.c.r, gg: this.c.g, b: this.c.b,
-        fade: type === 'mote' || type === 'confetti',
+        fade: type === 'mote' || type === 'confetti' || type === 'note', tw: !!P.twinkle,
       });
+    }
+  }
+
+  ring(type, x, y, z, n, speed) {
+    const P = PRESETS[type];
+    if (!P) return;
+    for (let i = 0; i < n && this.p.length < MAX; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
+      const r = (q) => q[0] + Math.random() * (q[1] - q[0]);
+      this.c.set(P.col[(Math.random() * P.col.length) | 0]);
+      const sp = speed * (0.75 + Math.random() * 0.5);
+      this.p.push({ x, y: y + 0.05, z, vx: Math.cos(a) * sp, vy: P.up * (0.6 + Math.random() * 0.8), vz: Math.sin(a) * sp * 0.6, life: r(P.life), age: 0, size: r(P.size), g: P.g, drag: P.drag, a: P.alpha, r: this.c.r, gg: this.c.g, b: this.c.b, fade: false, tw: false });
     }
   }
 
@@ -93,7 +118,8 @@ export class FX {
       if (q.fade) { q.vx += Math.sin(q.age * 1.3 + q.size * 50) * 0.02; q.vy += Math.cos(q.age * 0.9 + q.size * 30) * 0.015; }
       q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt;
       const k = q.age / q.life;
-      const al = q.fade ? Math.sin(k * Math.PI) : (1 - k) * (k < 0.1 ? k * 10 : 1);
+      let al = q.fade ? Math.sin(k * Math.PI) : (1 - k) * (k < 0.1 ? k * 10 : 1);
+      if (q.tw) al *= 0.6 + 0.4 * Math.sin(q.age * 40 + q.size * 100);
       this.pos[j * 3] = q.x; this.pos[j * 3 + 1] = q.y; this.pos[j * 3 + 2] = q.z;
       this.size[j] = q.size * (q.g < 0 ? 1 + k * 1.2 : 1);
       this.tint[j * 4] = q.r; this.tint[j * 4 + 1] = q.gg; this.tint[j * 4 + 2] = q.b; this.tint[j * 4 + 3] = q.a * al;

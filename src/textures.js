@@ -312,3 +312,63 @@ export function wallPaint(base = '#efe3cf') {
     return tex(c);
   });
 }
+
+export function wallpaper(base = '#e9dcc4', stripe = '#d8c7a6', seed = 4) {
+  return memo('wallpaper' + base + stripe, () => {
+    const W = 512, H = 512;
+    const [c, g] = canvas(W, H);
+    const n = makeNoise(seed);
+    g.fillStyle = base; g.fillRect(0, 0, W, H);
+    g.fillStyle = stripe;
+    for (let x = 0; x < W; x += 64) { g.fillRect(x, 0, 22, H); g.fillRect(x + 30, 0, 4, H); }
+    g.globalAlpha = 0.35; g.fillStyle = '#fff8ea';
+    for (let y = 0; y < H; y += 64) for (let x = 0; x < W; x += 64) { g.beginPath(); g.ellipse(x + 47, y + 32, 5, 9, 0, 0, 7); g.fill(); }
+    g.globalAlpha = 1;
+    const id = g.getImageData(0, 0, W, H), d = id.data;
+    for (let i = 0; i < W * H; i++) { const v = (n((i % W) / 50, ((i / W) | 0) / 50, 3) - 0.5) * 14; d[i * 4] += v; d[i * 4 + 1] += v; d[i * 4 + 2] += v; }
+    g.putImageData(id, 0, 0);
+    return tex(c);
+  });
+}
+
+export function cork() {
+  return memo('cork', () => {
+    const W = 256, H = 256;
+    const [c, g] = canvas(W, H);
+    const r = rng(91);
+    g.fillStyle = '#b98a58'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 2600; i++) { const x = r() * W, y = r() * H, s = 1 + r() * 3; g.fillStyle = `rgba(${90 + r() * 80},${60 + r() * 50},${30 + r() * 30},${0.4 + r() * 0.5})`; g.fillRect(x, y, s, s); }
+    return tex(c);
+  });
+}
+
+export function rug(a = '#9a4b3c', b = '#e9d8b6', c2 = '#3f5a6e') {
+  return memo('rug' + a, () => {
+    const W = 512, H = 256;
+    const [c, g] = canvas(W, H);
+    g.fillStyle = a; g.fillRect(0, 0, W, H);
+    g.strokeStyle = b; g.lineWidth = 10; g.strokeRect(18, 18, W - 36, H - 36);
+    g.strokeStyle = c2; g.lineWidth = 6; g.strokeRect(36, 36, W - 72, H - 72);
+    g.fillStyle = b;
+    for (let x = 70; x < W - 60; x += 56) { g.beginPath(); g.moveTo(x, H / 2); g.lineTo(x + 18, H / 2 - 30); g.lineTo(x + 36, H / 2); g.lineTo(x + 18, H / 2 + 30); g.closePath(); g.fill(); }
+    return tex(c);
+  });
+}
+
+export function nightSky() {
+  return memo('nightsky', () => {
+    const W = 1024, H = 1024;
+    const [c, g] = canvas(W, H);
+    const grd = g.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#0b1426'); grd.addColorStop(0.6, '#1a2a48'); grd.addColorStop(1, '#2b3550');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    const r = rng(17);
+    for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(255,255,255,${0.3 + r() * 0.7})`; const s = r() < 0.1 ? 2 : 1; g.fillRect(r() * W, r() * H * 0.7, s, s); }
+    const moon = g.createRadialGradient(W * 0.68, H * 0.28, 4, W * 0.68, H * 0.28, 160);
+    moon.addColorStop(0, 'rgba(255,250,232,1)'); moon.addColorStop(0.22, 'rgba(255,248,226,1)'); moon.addColorStop(0.26, 'rgba(200,215,255,0.35)'); moon.addColorStop(1, 'rgba(120,140,200,0)');
+    g.fillStyle = moon; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(14,20,30,0.95)';
+    for (let i = 0; i < 14; i++) { const x = r() * W, h = 150 + r() * 220, w = 80 + r() * 120; g.beginPath(); g.ellipse(x, H - h * 0.4, w, h * 0.55, 0, 0, 7); g.fill(); }
+    return tex(c, { clamp: true });
+  });
+}

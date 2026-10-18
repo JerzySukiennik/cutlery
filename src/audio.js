@@ -40,6 +40,12 @@ const THEMES = {
   ch1: { bpm: 58, key: 62, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 10], [-5, -1, 2, 7, 11], [-3, 2, 4, 7, 9]], pat: 'box', mel: 0.25, oct: 12 },
   ch2: { bpm: 70, key: 65, prog: [[0, 4, 7, 12, 14], [-8, -5, -1, 4, 7], [-7, -3, 0, 5, 9], [-5, -1, 2, 7, 11]], pat: 'walk', mel: 0.4, oct: 0 },
   ch3: { bpm: 74, key: 67, prog: [[0, 4, 7, 11, 14], [-5, -1, 2, 7, 11], [-8, -5, -1, 2, 7], [-7, -3, 0, 4, 11]], pat: 'arp', mel: 0.55, oct: 0 },
+  pantry: { bpm: 62, key: 57, prog: [[0, 3, 7, 10, 14], [-4, 0, 3, 7, 10], [-7, -4, 0, 3, 8], [-5, -2, 2, 5, 10]], pat: 'box', mel: 0.3, oct: 12 },
+  living: { bpm: 66, key: 60, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 11], [-8, -5, -1, 4, 7], [-5, -1, 2, 5, 9]], pat: 'arp', mel: 0.5, oct: 0 },
+  dining: { bpm: 72, key: 62, prog: [[0, 4, 7, 9, 14], [-5, -1, 2, 7, 11], [-3, 0, 4, 7, 12], [-7, -3, 0, 4, 11]], pat: 'walk', mel: 0.45, oct: 0 },
+  study: { bpm: 64, key: 58, prog: [[0, 4, 7, 11, 14], [-1, 2, 5, 9, 12], [-3, 0, 4, 7, 11], [-5, -1, 2, 5, 9]], pat: 'box', mel: 0.4, oct: 0 },
+  washing: { bpm: 78, key: 65, prog: [[0, 4, 7, 12, 16], [-3, 0, 4, 9, 12], [-7, -3, 0, 5, 9], [-5, -1, 2, 7, 11]], pat: 'arp', mel: 0.5, oct: 12 },
+  night: { bpm: 54, key: 60, prog: [[0, 3, 7, 10, 14], [-4, 0, 3, 7, 12], [-2, 2, 5, 9, 12], [-5, -1, 2, 7, 10]], pat: 'chord', mel: 0.35, oct: 0 },
   end: { bpm: 60, key: 67, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 14], [-7, -3, 0, 4, 11], [-5, -1, 2, 7, 14]], pat: 'chord', mel: 0.6, oct: 0 },
 };
 
@@ -267,6 +273,57 @@ export class Audio {
     o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.25);
     this.sfx('metal', v * 0.8, p);
   }
+  syn_drip(v, p) {
+    const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'sine';
+    const f0 = 700 + Math.random() * 700;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.45, t + 0.08);
+    const g = c.createGain(); this.env(g, t, 0.004, v * 0.18, 0.09);
+    o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.14);
+  }
+  syn_snap(v, p) {
+    this.noise(v * 0.7, p, 'highpass', 1800, 3000, 0.7, 0.002, 0.07);
+    this.sfx('latch', v, p);
+    this.sfx('clink', v * 0.7, p);
+    this.sfx('wood', v * 0.6, p);
+  }
+  syn_ding(v, p) {
+    const c = this.ctx, t = c.currentTime;
+    for (const [f, a] of [[1568, 1], [3920, 0.35], [2350, 0.25]]) {
+      const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      const g = c.createGain(); this.env(g, t, 0.003, v * 0.12 * a, 1.1);
+      o.connect(g); this.route(g, p); o.start(t); o.stop(t + 1.2);
+    }
+  }
+  syn_boing(v, p) {
+    const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.12); o.frequency.exponentialRampToValueAtTime(260, t + 0.3);
+    const g = c.createGain(); this.env(g, t, 0.005, v * 0.22, 0.32);
+    o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.4);
+    this.sfx('cloth', v * 0.5, p);
+  }
+
+  sting() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const th = (this.music && this.music.th) || THEMES.menu;
+    const chord = th.prog[((this.music && this.music.bar) || 0) % th.prog.length];
+    const base = th.key + 12;
+    [0, 1, 2, 3, 4].forEach((i) => this.note(base + chord[i % chord.length] + (i > 2 ? 12 : 0), 0.32 - i * 0.03, i * 0.075, this.sfxBus));
+  }
+
+  checkpoint() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const th = (this.music && this.music.th) || THEMES.menu;
+    this.note(th.key + 24, 0.22, 0, this.sfxBus);
+    this.note(th.key + 31, 0.16, 0.12, this.sfxBus);
+  }
+
+  key(midi) {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    this.note(midi, 0.42, 0, this.sfxBus);
+  }
+
   syn_chime(v, p) { this.note(84, v * 0.5, 0, this.sfxBus); this.note(91, v * 0.35, 0.09, this.sfxBus); }
 
   note(midi, vel = 0.6, delay = 0, bus) {

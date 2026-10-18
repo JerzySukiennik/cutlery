@@ -1,9 +1,25 @@
 // UI: menu, chapter picker, online lobby, pause, HUD, hints, title cards, fades and touch controls.
-export const CHAPTERS = [
-  { id: 1, num: 'I', title: 'Cold Start', sub: 'Butter wakes up alone in the fridge.', players: 1, chars: ['butter'] },
-  { id: 2, num: 'II', title: 'The Drawer', sub: 'Fork and Knife go looking for Butter.', players: 2, chars: ['fork', 'knife'] },
-  { id: 3, num: 'III', title: 'Breakfast', sub: 'Together again, before the house wakes.', players: 3, chars: ['fork', 'knife', 'butter'] },
+export const TRACKS = [
+  { id: 'b', name: 'Butter', players: 1, chars: ['butter'], note: 'one player' },
+  { id: 'd', name: 'Fork & Knife', players: 2, chars: ['fork', 'knife'], note: 'two players' },
+  { id: 't', name: 'All three', players: 3, chars: ['fork', 'knife', 'butter'], note: 'three players' },
 ];
+
+export const CHAPTERS = [
+  { id: 'b1', track: 'b', num: 'I', title: 'Cold Start', sub: 'Butter wakes up alone in the fridge.', end: 'The cutlery drawer was empty. Fork and Knife had already gone looking.' },
+  { id: 'b2', track: 'b', num: 'II', title: 'The Pantry', sub: 'Jars, sacks and a mousetrap.', end: 'Out through the gap under the pantry door.' },
+  { id: 'b3', track: 'b', num: 'III', title: 'The Living Room', sub: 'Over the piano, toward the kitchen.', end: 'There they were, on the kitchen counter.' },
+  { id: 'd1', track: 'd', num: 'I', title: 'The Drawer', sub: 'Fork and Knife climb out to find Butter.', end: 'The butter dish was empty. Butter had gone looking for them.' },
+  { id: 'd2', track: 'd', num: 'II', title: 'The Dining Room', sub: 'Chairs, a tablecloth and a serving spoon.', end: 'No Butter in the dining room either.' },
+  { id: 'd3', track: 'd', num: 'III', title: 'The Study', sub: 'Books, tape and a cork board.', end: 'Back to the kitchen, and someone yellow by the door.' },
+  { id: 't1', track: 't', num: 'I', title: 'Breakfast', sub: 'Together again, before the house wakes.', end: 'Breakfast, together.' },
+  { id: 't2', track: 't', num: 'II', title: 'Washing Up', sub: 'A sink full of water, and Butter floats.', end: 'Everything clean, everyone dry.' },
+  { id: 't3', track: 't', num: 'III', title: 'Goodnight', sub: 'Home through the dark kitchen.', end: 'Goodnight, Fork. Goodnight, Knife. Goodnight, Butter.' },
+];
+
+export const trackOf = (id) => TRACKS.find((t) => t.id === String(id)[0]);
+export const chapterOf = (id) => CHAPTERS.find((c) => c.id === id);
+export const nextChapter = (id) => { const i = CHAPTERS.findIndex((c) => c.id === id); const n = CHAPTERS[i + 1]; return n && n.track === CHAPTERS[i].track ? n : null; };
 
 export const GLYPH = {
   fork: `<svg viewBox="0 0 24 48" aria-hidden="true"><path d="M12 47c3 0 4-2 4-4l-1-14c0-4-1-7-1-9 0-2 4-3 4-6V3h-2v10h-1.6V3h-1.8v10h-1.2V3H9.6v10H8V3H6v11c0 3 4 4 4 6 0 2-1 5-1 9L8 43c0 2 1 4 4 4z" fill="currentColor"/></svg>`,
@@ -29,7 +45,8 @@ export class UI {
     this.toastEl = $('#toast');
     this.loading = $('#loading');
     this.done = new Set();
-    try { for (const x of JSON.parse(localStorage.getItem('cutlery.done') || '[]')) this.done.add(x); } catch (e) {}
+    const legacy = { 1: 'b1', 2: 'd1', 3: 't1' };
+    try { for (const x of JSON.parse(localStorage.getItem('cutlery.done') || '[]')) this.done.add(legacy[x] || x); } catch (e) {}
     this.nick = '';
     try { this.nick = localStorage.getItem('cutlery.nick') || ''; } catch (e) {}
     this.hintT = 0;
@@ -46,6 +63,13 @@ export class UI {
   show(el) { for (const s of [this.menu, this.lobby, this.pause]) s.classList.toggle('show', s === el); }
   hideAll() { this.show(null); }
 
+  unlocked(id) {
+    const i = CHAPTERS.findIndex((c) => c.id === id);
+    if (i < 0) return false;
+    const c = CHAPTERS[i], prev = CHAPTERS[i - 1];
+    return !prev || prev.track !== c.track || this.done.has(prev.id) || new URLSearchParams(location.search).has('all');
+  }
+
   markDone(id) {
     this.done.add(id);
     try { localStorage.setItem('cutlery.done', JSON.stringify([...this.done])); } catch (e) {}
@@ -53,20 +77,23 @@ export class UI {
 
   showMenu(focus = null) {
     const g = this.g;
-    const chapters = CHAPTERS.map((c) => `
-      <button class="chap ${this.done.has(c.id) ? 'done' : ''}" data-ch="${c.id}">
-        <span class="chap-num">${c.num}</span>
-        <span class="chap-body">
-          <span class="chap-title">${c.title}</span>
-          <span class="chap-sub">${c.sub}</span>
-        </span>
-        <span class="chap-who">${c.chars.map((k) => `<i class="gl gl-${k}" title="${NAMES[k]}">${GLYPH[k]}</i>`).join('')}<em>${c.players === 1 ? '1 player' : c.players + ' players'}</em></span>
-      </button>`).join('');
+    const chapters = TRACKS.map((t) => `
+      <section class="track">
+        <h3 class="track-head"><span class="track-glyphs">${t.chars.map((k) => `<i class="gl gl-${k}" title="${NAMES[k]}">${GLYPH[k]}</i>`).join('')}</span>${t.name}<em>${t.note}</em></h3>
+        ${CHAPTERS.filter((c) => c.track === t.id).map((c) => {
+          const open = this.unlocked(c.id);
+          const prev = CHAPTERS[CHAPTERS.indexOf(c) - 1];
+          return `<button class="chap ${this.done.has(c.id) ? 'done' : ''} ${open ? '' : 'locked'}" data-ch="${c.id}" ${open ? '' : 'aria-disabled="true"'}>
+            <span class="chap-num">${c.num}</span>
+            <span class="chap-body"><span class="chap-title">${c.title}</span><span class="chap-sub">${open ? c.sub : `Finish ${prev ? prev.title : 'the chapter before'} to open.`}</span></span>
+          </button>`;
+        }).join('')}
+      </section>`).join('');
     this.menu.innerHTML = `
       <div class="menu-wrap">
         <header class="brand">
           <h1>Cutlery</h1>
-          <p>A breakfast in three parts</p>
+          <p>One house, one day, three of them</p>
         </header>
         <nav class="chapters">${chapters}</nav>
         <div class="menu-side" id="side"></div>
@@ -78,7 +105,10 @@ export class UI {
       </div>`;
     this.show(this.menu);
     this.menu.querySelectorAll('.chap').forEach((b) => {
-      b.addEventListener('click', () => { g.audio.ui('ui_select'); this.pickChapter(+b.dataset.ch); });
+      b.addEventListener('click', () => {
+        if (b.classList.contains('locked')) { g.audio.ui('ui_back'); b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; }
+        g.audio.ui('ui_select'); this.pickChapter(b.dataset.ch);
+      });
       b.addEventListener('pointerenter', () => g.audio.ui('ui_click'));
     });
     this.menu.querySelector('[data-act=settings]').onclick = () => { g.audio.ui('ui_open'); this.side('settings'); };
@@ -90,9 +120,9 @@ export class UI {
   side(kind, data) {
     const el = $('#side', this.menu);
     if (!el) return;
-    this.menu.querySelectorAll('.chap').forEach((b) => b.classList.toggle('on', kind === 'chapter' && +b.dataset.ch === data));
+    this.menu.querySelectorAll('.chap').forEach((b) => b.classList.toggle('on', kind === 'chapter' && b.dataset.ch === data));
     if (kind === 'chapter') {
-      const c = CHAPTERS.find((x) => x.id === data);
+      const c = { ...chapterOf(data), ...trackOf(data), id: data };
       if (c.players === 1) {
         el.innerHTML = `<div class="panel"><h2>${c.title}</h2><p class="muted">${c.sub}</p><button class="btn primary" data-go="solo">Begin</button></div>`;
       } else {
@@ -147,7 +177,7 @@ export class UI {
     <dl class="keys tools">
       <dt class="gl gl-fork">${GLYPH.fork}</dt><dd>Fork sticks into soft things (bread, cheese, sponge, Butter), climbs them, and carries small things on its tines.</dd>
       <dt class="gl gl-knife">${GLYPH.knife}</dt><dd>Knife cuts strings and food, sticks into wood, and makes a springy ledge.</dd>
-      <dt class="gl gl-butter">${GLYPH.butter}</dt><dd>Butter hardens in the cold and softens in warmth. Soft, it squishes and clings. Melted, it seeps through grates.</dd>
+      <dt class="gl gl-butter">${GLYPH.butter}</dt><dd>Butter hardens in the cold and softens in warmth. Soft, it squishes and clings. Melted, it pours through grates. In water it floats.</dd>
     </dl>`;
   }
 
@@ -159,7 +189,7 @@ export class UI {
   }
 
   showLobby(net, chapter) {
-    const c = CHAPTERS.find((x) => x.id === chapter);
+    const c = { ...chapterOf(chapter), ...trackOf(chapter) };
     const players = net.players || {};
     const me = net.uid;
     const owners = {};
@@ -175,7 +205,7 @@ export class UI {
     const host = net.isHost;
     this.lobby.innerHTML = `
       <div class="lobby-wrap">
-        <p class="eyebrow">Chapter ${c.num} · ${c.title}</p>
+        <p class="eyebrow">${c.name} · Chapter ${c.num} · ${c.title}</p>
         <h2>Room <span class="code">${net.code}</span></h2>
         <p class="muted">Share the code. Everyone opens the game, picks Join a room and types it in.</p>
         <div class="picks">${cards}</div>
@@ -202,6 +232,7 @@ export class UI {
 
   showPause() {
     const g = this.g;
+    this.pause.classList.remove('end-screen');
     this.pause.innerHTML = `<div class="pause-wrap">
       <h2>Paused</h2>
       <nav class="stack">
@@ -298,20 +329,24 @@ export class UI {
   }
 
   showEnd(ch, next) {
-    const c = CHAPTERS.find((x) => x.id === ch);
-    const n = next ? CHAPTERS.find((x) => x.id === next) : null;
+    const c = chapterOf(ch), t = trackOf(ch);
+    const n = next ? chapterOf(next) : null;
+    this.pause.classList.add('end-screen');
+    document.body.classList.add('ended');
     this.pause.innerHTML = `<div class="pause-wrap end">
-      <p class="eyebrow">Chapter ${c.num}</p><h2>${c.title}</h2>
-      <p class="muted">${ch === 1 ? 'The drawer was empty. Somewhere out there, Fork and Knife were looking too.' : ch === 2 ? 'The butter dish was empty. Butter had gone looking for them.' : 'Breakfast, together.'}</p>
+      <p class="eyebrow">${t.name} · Chapter ${c.num} complete</p><h2>${c.title}</h2>
+      <p class="end-line">${c.end}</p>
       <nav class="stack">
         ${n ? `<button class="btn primary" data-act="next">Continue: ${n.title}</button>` : ''}
         <button class="btn ${n ? '' : 'primary'}" data-act="menu">${this.g.net ? 'Back to the room' : 'Back to the menu'}</button>
       </nav></div>`;
     this.show(this.pause);
     const nb = this.pause.querySelector('[data-act=next]');
-    if (nb) nb.onclick = () => { this.g.audio.ui('ui_select'); this.g.afterEnd(next); };
-    this.pause.querySelector('[data-act=menu]').onclick = () => { this.g.audio.ui('ui_back'); this.g.afterEnd(null); };
+    const leave = () => { this.pause.classList.remove('end-screen'); document.body.classList.remove('ended'); };
+    if (nb) nb.onclick = () => { this.g.audio.ui('ui_select'); leave(); this.g.afterEnd(next); };
+    this.pause.querySelector('[data-act=menu]').onclick = () => { this.g.audio.ui('ui_back'); leave(); this.g.afterEnd(null); };
   }
+
 }
 
 function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

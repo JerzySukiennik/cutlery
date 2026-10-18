@@ -1,7 +1,13 @@
 // Level registry.
 import menu from './menu.js';
-import ch1 from './ch1.js';
-import ch2 from './ch2.js';
-import ch3 from './ch3.js';
+import b1 from './b1.js';
+import b2 from './b2.js';
+import b3 from './b3.js';
+import d1 from './d1.js';
+import d2 from './d2.js';
+import d3 from './d3.js';
+import t1 from './t1.js';
+import t2 from './t2.js';
+import t3 from './t3.js';
 
-export const LEVELS = { menu, 1: ch1, 2: ch2, 3: ch3 };
+export const LEVELS = { menu, b1, b2, b3, d1, d2, d3, t1, t2, t3 };
