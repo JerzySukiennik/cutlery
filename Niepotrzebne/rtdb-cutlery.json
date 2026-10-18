@@ -1,0 +1,18 @@
+{
+  "rooms": {
+    "$code": {
+      ".read": "auth != null && $code.matches(/^[A-Z]{4}$/)",
+      ".write": "auth != null && $code.matches(/^[A-Z]{4}$/)",
+      "meta": {
+        "ch": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3" },
+        "host": { ".validate": "newData.isString() && newData.val().length <= 64" }
+      },
+      "players": {
+        "$uid": {
+          "nick": { ".validate": "newData.isString() && newData.val().length <= 24" },
+          "char": { ".validate": "newData.val() == '' || newData.val() == 'fork' || newData.val() == 'knife' || newData.val() == 'butter'" }
+        }
+      }
+    }
+  }
+}
