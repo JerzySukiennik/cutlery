@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Cutlery: a wordless 2.5D co-op kitchen platformer for Fork, Knife and Butter. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a120c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Cutlery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+    "rapier2d": "https://cdn.jsdelivr.net/npm/@dimforge/rapier2d-compat@0.14.0/rapier.es.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="loading" class="screen show">
+    <div class="load-mark">Cutlery</div>
+    <div class="load-bar"><i></i></div>
+    <div class="load-note">setting the table</div>
+  </div>
+  <div id="menu" class="screen"></div>
+  <div id="pause" class="screen"></div>
+  <div id="hud"></div>
+  <div id="hint"></div>
+  <div id="card"></div>
+  <div id="letterbox"><i></i><i></i></div>
+  <div id="fade"></div>
+  <div id="touch"></div>
+  <div id="toast"></div>
+  <div id="rotate"><div><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="14" y="4" width="20" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M8 30a16 16 0 0 0 10 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg><p>Turn your phone sideways</p></div></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
