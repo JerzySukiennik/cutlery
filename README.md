@@ -34,6 +34,6 @@ A/D walk, W or Space jump (hold for higher), E or Shift use your tool, S squish 
 
 ## Tech
 
-three.js 0.169 and Rapier 2D 0.14 from a CDN, ES modules, no build step. Kinematic character controllers for everything that moves, a depth-of-field grade pass, procedural props and textures, a felt piano rendered in the browser with OfflineAudioContext, sound effects from Kenney (CC0). Online play runs on Firebase Realtime Database: house presence, the shared lift, invitations and per-chapter rooms.
+three.js 0.169 and Rapier 2D 0.14 from a CDN, ES modules, no build step. Kinematic character controllers for everything that moves, a depth-of-field grade pass, procedural props and textures, a felt piano rendered in the browser with OfflineAudioContext, recorded foley and room loops from freesound.org (all CC0, listed in `assets/audio/CREDITS.md`). Online play runs on Firebase Realtime Database: house presence, the shared lift, invitations and per-chapter rooms.
 
 Run locally with any static server, for example `python3 Niepotrzebne/serve.py 8473`. Add `?net=local` to test the house and rooms between tabs of one browser without Firebase, `?ch=d2` to jump straight into a chapter.

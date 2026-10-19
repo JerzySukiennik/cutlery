@@ -905,7 +905,7 @@ export class World {
       const rx = r.pts[Math.floor(r.n / 2)].x;
       if (Math.abs(rx - cx) < hw + 0.1 && cy - hh < top && cy + hh > bot) {
         this.setFlag('rope_' + r.id, 1);
-        this.sfx('slice', rx, cy, 0.9);
+        this.sfx('cut', rx, cy, 0.9);
         this.fx.emit('sparkle', rx, Math.min(top, Math.max(bot, cy)), 0.3, 5);
         return true;
       }
@@ -1136,7 +1136,7 @@ export class World {
         if (Math.abs(c.pos.x - t.slotX) < 0.9 && c.bottom > t.top - 0.08 && c.bottom < t.top + 0.35 && !busy) {
           c.enterToaster(t);
           this.setFlag('ts_' + t.id, c.kind);
-          this.sfx('latch', t.slotX, t.top, 0.9);
+          this.sfx('toast', t.slotX, t.top, 0.9);
         }
       }
     }

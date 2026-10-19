@@ -1,39 +1,64 @@
-// Audio: Kenney sample bank, synthesized foley, a rendered felt piano and generative chapter music.
+// Audio: recorded foley (freesound.org, CC0), recorded room loops, a rendered felt piano and generative chapter music.
+const seq = (s, k) => Array.from({ length: k }, (_, i) => `${s}_${i}`);
 const FILES = {
-  squish: ['squish0', 'squish1', 'squish2', 'squish3', 'squish4'],
-  squishSoft: ['soft_m0', 'soft_m1', 'soft_m2', 'soft_m3', 'soft_m4'],
-  soft: ['soft_m0', 'soft_m1', 'soft_m2', 'soft_m3'],
-  metalTick: ['metal_l0', 'metal_l1', 'metal_l2', 'metal_l3', 'metal_l4'],
-  metal: ['metal_l0', 'metal_l1', 'metal_l2', 'metal_l3', 'metal_l4', 'metal_m0'],
-  clink: ['metal_m0', 'metal_m1', 'metal_m2'],
-  plate: ['plate_l0', 'plate_l1', 'plate_l2', 'plate_l3', 'plate_l4'],
-  plateSoft: ['plate_l0', 'plate_l2', 'plate_l4'],
-  plateHeavy: ['plate_h0', 'plate_h1', 'plate_h2'],
-  wood: ['wood_m0', 'wood_m1', 'wood_m2', 'plank_m0', 'plank_m1'],
-  woodHeavy: ['wood_h0', 'wood_h1', 'wood_h2'],
-  thunk: ['wood_h0', 'wood_h1', 'wood_h2'],
-  stab: ['soft_h0', 'soft_h1', 'soft_h2'],
-  unstab: ['draw0', 'draw1'],
-  draw: ['draw0', 'draw1', 'draw2'],
-  slice: ['slice0', 'slice1'],
-  chop: ['chop'],
-  latch: ['latch'],
-  tick: ['click_metal'],
-  switch: ['ui_switch'],
-  drag: ['plank_m2', 'wood_m1'],
-  crack: ['glass_l0', 'glass_l1', 'glass_l2'],
-  glass: ['glass_l0', 'glass_l1', 'glass_l2'],
-  door: ['door_open'],
-  doorClose: ['door_close'],
-  creak: ['creak0', 'creak1'],
-  pot: ['pot0', 'pot1'],
-  cloth: ['cloth'],
+  squish: seq('squish', 5),
+  squishSoft: seq('bstep', 4),
+  soft: seq('soft', 4),
+  metalTick: seq('tap', 5),
+  metal: ['metal_a', 'metal_b', 'clink_1', 'clink_3'],
+  clink: seq('clink', 4),
+  plate: seq('plate', 4),
+  plateSoft: ['plate_0', 'plate_1', 'plate_3'],
+  plateHeavy: seq('plates', 2),
+  wood: seq('wood', 4),
+  woodHeavy: seq('woodheavy', 3),
+  thunk: ['woodheavy_0', 'woodheavy_1'],
+  stab: seq('stab', 3),
+  unstab: ['pull_0'],
+  draw: ['pull_0', 'drawer_0'],
+  slice: seq('slice', 3),
+  chop: ['chop_0'],
+  cut: seq('cut', 2),
+  latch: seq('latch', 2),
+  tick: ['tick_0'],
+  switch: ['switch_0'],
+  drag: seq('drag', 2),
+  crack: seq('crack', 2),
+  glass: seq('glass', 3),
+  door: ['door_0'],
+  doorClose: ['doorclose_0'],
+  creak: seq('creak', 2),
+  pot: seq('pot', 2),
+  cloth: ['cloth_0', 'cloth_1', 'clothdrop_0'],
+  pluck: seq('pluck', 2),
+  drop: ['waterdrop_0'],
+  drip: ['drip_0', 'drip_1', 'waterdrop_0'],
+  splash: seq('splash', 2),
+  sizzle: ['sizzle_0'],
+  spread: seq('spread', 3),
+  wobble: ['wobble_0'],
+  pop: seq('toastpop', 2),
+  toast: ['toastdown_0'],
+  ding: ['ding_0'],
+  twang: seq('twang', 2),
+  boing: ['spring_0'],
+  snap: seq('trap', 2),
+  whoosh: seq('whoosh', 2),
+  swish: seq('swish', 2),
+  poof: seq('poof', 2),
   ui_select: ['ui_select'], ui_click: ['ui_click'], ui_toggle: ['ui_toggle'], ui_back: ['ui_back'], ui_open: ['ui_open'], ui_close: ['ui_close'], ui_chime: ['ui_chime'], ui_bong: ['ui_bong'],
-  pluck: ['pluck0', 'pluck1'],
-  drop: ['drop'],
 };
 
-const PITCH = { clink: [1.15, 1.45], metalTick: [1.1, 1.4], tick: [1.4, 1.6], drag: [0.65, 0.8], crack: [0.7, 0.9], squish: [0.9, 1.2], squishSoft: [1.0, 1.25], stab: [1.0, 1.25], plateSoft: [1.3, 1.5] };
+const PITCH = { clink: [0.96, 1.12], metalTick: [0.95, 1.15], tick: [1.0, 1.08], squish: [0.9, 1.15], squishSoft: [0.95, 1.2], plateSoft: [1.08, 1.22], drip: [0.85, 1.3], crack: [0.85, 1.05], ding: [1, 1], twang: [0.92, 1.08], drag: [0.9, 1.05], whoosh: [0.9, 1.15], swish: [0.95, 1.2] };
+const GAIN = { drag: 0.7, sizzle: 0.8, wobble: 0.8, spread: 0.9, ding: 0.75, poof: 0.8, whoosh: 0.8, swish: 0.9 };
+
+const AMB = {
+  kitchen: { room: 0.1, birds: 0.45 },
+  fridge: { fridge: 0.35, room: 0.02 },
+  quiet: { room: 0.05, birds: 0.1 },
+  night: { room: 0.04, night: 0.2 },
+};
+const AMB_PAN = { birds: -0.35, night: 0.25 };
 
 const THEMES = {
   menu: { bpm: 62, key: 64, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 11], [-7, -3, 0, 4, 7], [-5, -1, 2, 4, 9]], pat: 'arp', mel: 0.35, oct: 0 },
@@ -90,7 +115,7 @@ export class Audio {
       done++;
       if (onProgress) onProgress(done / names.size);
     }));
-    this.renderPiano().catch((e) => console.warn('piano', e));
+    this.renderPiano().catch((e) => console.warseq('piano', e));
     if (onProgress) onProgress(1);
     const unlock = () => { if (c.state !== 'running') c.resume(); };
     addEventListener('pointerdown', unlock, { capture: true });
@@ -187,122 +212,24 @@ export class Audio {
 
   sfx(name, vol = 1, pan = 0) {
     if (!this.ctx || this.ctx.state !== 'running') return;
-    const synth = this['syn_' + name];
-    if (synth) { synth.call(this, vol, pan); return; }
     const list = FILES[name];
-    if (!list) return;
-    const b = this.buffers[list[(Math.random() * list.length) | 0]];
-    const pr = PITCH[name] || [0.93, 1.08];
-    this.play(b, vol * 0.8, pan, pr[0] + Math.random() * (pr[1] - pr[0]));
+    if (list) {
+      this.last = this.last || {};
+      let i = (Math.random() * list.length) | 0;
+      if (list.length > 1 && i === this.last[name]) i = (i + 1) % list.length;
+      this.last[name] = i;
+      const b = this.buffers[list[i]];
+      if (b) {
+        const pr = PITCH[name] || [0.94, 1.06];
+        this.play(b, vol * 0.8 * (GAIN[name] || 1), pan, pr[0] + Math.random() * (pr[1] - pr[0]));
+        return;
+      }
+    }
+    const synth = this['syn_' + name];
+    if (synth) synth.call(this, vol, pan);
   }
 
   ui(name) { this.sfx(name, 0.55, 0); }
-
-  noiseBuf() {
-    if (this._noise) return this._noise;
-    const c = this.ctx, n = c.sampleRate;
-    const b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-    this._noise = b;
-    return b;
-  }
-
-  env(g, t, a, peak, dec) {
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
-  }
-
-  route(node, pan) {
-    const c = this.ctx;
-    const p = c.createStereoPanner ? c.createStereoPanner() : null;
-    if (p) { p.pan.value = pan; node.connect(p).connect(this.sfxBus); p.connect(this.sfxRev); }
-    else { node.connect(this.sfxBus); }
-  }
-
-  noise(vol, pan, type, f0, f1, q, a, dec, rate = 1) {
-    const c = this.ctx, t = c.currentTime;
-    const s = c.createBufferSource(); s.buffer = this.noiseBuf(); s.playbackRate.value = rate;
-    const f = c.createBiquadFilter(); f.type = type; f.Q.value = q;
-    f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + a + dec);
-    const g = c.createGain(); this.env(g, t, a, vol, dec);
-    s.connect(f).connect(g); this.route(g, pan);
-    s.start(t, Math.random() * 0.5); s.stop(t + a + dec + 0.05);
-  }
-
-  syn_whoosh(v, p) { this.noise(v * 0.35, p, 'bandpass', 500, 2600, 1.2, 0.05, 0.2); }
-  syn_swish(v, p) { this.noise(v * 0.45, p, 'bandpass', 2400, 900, 2.0, 0.02, 0.16); }
-  syn_poof(v, p) { this.noise(v * 0.5, p, 'lowpass', 1400, 200, 0.7, 0.02, 0.45); }
-  syn_splash(v, p) { this.noise(v * 0.6, p, 'bandpass', 1200, 400, 0.8, 0.01, 0.5); this.noise(v * 0.3, p, 'highpass', 3000, 5000, 0.5, 0.01, 0.3); }
-  syn_spread(v, p) { this.noise(v * 0.35, p, 'bandpass', 700, 1600, 1.5, 0.08, 0.6); this.sfx('squish', v * 0.7, p); }
-  syn_sizzle(v, p) {
-    const c = this.ctx;
-    for (let i = 0; i < 6; i++) setTimeout(() => this.noise(v * 0.12, p, 'highpass', 4000 + Math.random() * 2000, 6000, 0.6, 0.005, 0.06 + Math.random() * 0.1), i * 70 + Math.random() * 60);
-  }
-  syn_wobble(v, p) {
-    const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(140, t);
-    const lfo = c.createOscillator(); lfo.frequency.value = 14;
-    const lg = c.createGain(); lg.gain.value = 25; lfo.connect(lg).connect(o.frequency);
-    const g = c.createGain(); this.env(g, t, 0.01, v * 0.25, 0.35);
-    o.connect(g); this.route(g, p);
-    o.start(t); lfo.start(t); o.stop(t + 0.45); lfo.stop(t + 0.45);
-    this.sfx('soft', v * 0.6, p);
-  }
-  syn_twang(v, p) {
-    const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(190, t);
-    o.frequency.exponentialRampToValueAtTime(150, t + 0.7);
-    const lfo = c.createOscillator(); lfo.frequency.setValueAtTime(22, t); lfo.frequency.linearRampToValueAtTime(9, t + 0.8);
-    const lg = c.createGain(); lg.gain.setValueAtTime(55, t); lg.gain.exponentialRampToValueAtTime(2, t + 0.8);
-    lfo.connect(lg).connect(o.frequency);
-    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(500, t + 0.8); f.Q.value = 6;
-    const g = c.createGain(); this.env(g, t, 0.005, v * 0.28, 0.85);
-    o.connect(f).connect(g); this.route(g, p);
-    o.start(t); lfo.start(t); o.stop(t + 0.95); lfo.stop(t + 0.95);
-    this.sfx('thunk', v * 0.5, p);
-  }
-  syn_pop(v, p) {
-    this.sfx('latch', v, p);
-    const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(320, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.12);
-    const g = c.createGain(); this.env(g, t, 0.005, v * 0.2, 0.18);
-    o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.25);
-    this.sfx('metal', v * 0.8, p);
-  }
-  syn_drip(v, p) {
-    const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sine';
-    const f0 = 700 + Math.random() * 700;
-    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.45, t + 0.08);
-    const g = c.createGain(); this.env(g, t, 0.004, v * 0.18, 0.09);
-    o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.14);
-  }
-  syn_snap(v, p) {
-    this.noise(v * 0.7, p, 'highpass', 1800, 3000, 0.7, 0.002, 0.07);
-    this.sfx('latch', v, p);
-    this.sfx('clink', v * 0.7, p);
-    this.sfx('wood', v * 0.6, p);
-  }
-  syn_ding(v, p) {
-    const c = this.ctx, t = c.currentTime;
-    for (const [f, a] of [[1568, 1], [3920, 0.35], [2350, 0.25]]) {
-      const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-      const g = c.createGain(); this.env(g, t, 0.003, v * 0.12 * a, 1.1);
-      o.connect(g); this.route(g, p); o.start(t); o.stop(t + 1.2);
-    }
-  }
-  syn_boing(v, p) {
-    const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.12); o.frequency.exponentialRampToValueAtTime(260, t + 0.3);
-    const g = c.createGain(); this.env(g, t, 0.005, v * 0.22, 0.32);
-    o.connect(g); this.route(g, p); o.start(t); o.stop(t + 0.4);
-    this.sfx('cloth', v * 0.5, p);
-  }
 
   sting() {
     if (!this.ctx || this.ctx.state !== 'running') return;
@@ -396,52 +323,30 @@ export class Audio {
   ambience(kind) {
     const c = this.ctx;
     if (!c) return;
-    if (!this.layers) {
-      const mk = (freq, q) => {
-        const s = c.createBufferSource(); s.buffer = this.noiseBuf(); s.loop = true;
-        const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq; f.Q.value = q;
-        const g = c.createGain(); g.gain.value = 0;
-        s.connect(f).connect(g).connect(this.master);
-        s.start(0, Math.random());
-        return g;
-      };
-      const hum = mk(150, 0.7);
-      const o = c.createOscillator(); o.frequency.value = 55; const og = c.createGain(); og.gain.value = 0.08;
-      o.connect(og).connect(hum); o.start();
-      this.layers = { hum, room: mk(420, 0.3), birds: false };
-      const birds = () => {
-        if (this.layers.birds && c.state === 'running') this.chirp();
-        setTimeout(birds, 2200 + Math.random() * 6500);
-      };
-      setTimeout(birds, 1500);
-    }
-    this.ambienceMix(kind);
-  }
-
-  ambienceMix(kind) {
-    if (!this.layers || this.ambKind === kind) return;
+    this.layers = this.layers || {};
+    if (this.ambKind === kind) return;
     this.ambKind = kind;
-    const c = this.ctx, t = c.currentTime;
-    this.layers.hum.gain.setTargetAtTime(kind === 'fridge' ? 0.2 : kind === 'quiet' ? 0 : 0.012, t, 0.8);
-    this.layers.room.gain.setTargetAtTime(kind === 'quiet' ? 0 : kind === 'fridge' ? 0.015 : 0.045, t, 0.8);
-    this.layers.birds = kind === 'kitchen';
+    const mix = AMB[kind] || AMB.quiet, t = c.currentTime;
+    for (const name of new Set([...Object.keys(this.layers), ...Object.keys(mix)])) {
+      const L = this.layer(name);
+      L.g.gain.setTargetAtTime(mix[name] || 0, t, 0.8);
+    }
   }
 
-  chirp() {
-    const c = this.ctx, t = c.currentTime;
-    const n = 2 + Math.floor(Math.random() * 4);
-    const base = 2600 + Math.random() * 1600;
-    const pan = -0.7 + Math.random() * 0.5;
-    for (let i = 0; i < n; i++) {
-      const o = c.createOscillator(); o.type = 'sine';
-      const tt = t + i * (0.09 + Math.random() * 0.05);
-      o.frequency.setValueAtTime(base, tt);
-      o.frequency.exponentialRampToValueAtTime(base * (1.2 + Math.random() * 0.4), tt + 0.05);
-      o.frequency.exponentialRampToValueAtTime(base * 0.9, tt + 0.08);
-      const g = c.createGain(); this.env(g, tt, 0.01, 0.01 + Math.random() * 0.01, 0.07);
-      const p = c.createStereoPanner ? c.createStereoPanner() : null;
-      if (p) { p.pan.value = pan; o.connect(g).connect(p).connect(this.master); p.connect(this.reverb); } else o.connect(g).connect(this.master);
-      o.start(tt); o.stop(tt + 0.12);
-    }
+  ambienceMix(kind) { this.ambience(kind); }
+
+  layer(name) {
+    if (this.layers[name]) return this.layers[name];
+    const c = this.ctx;
+    const g = c.createGain(); g.gain.value = 0;
+    const p = c.createStereoPanner ? c.createStereoPanner() : null;
+    if (p) { p.pan.value = AMB_PAN[name] || 0; g.connect(p).connect(this.master); } else g.connect(this.master);
+    const L = this.layers[name] = { g };
+    fetch(`assets/audio/amb_${name}.mp3`).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej))).then((buf) => {
+      const s = c.createBufferSource(); s.buffer = buf; s.loop = true;
+      s.connect(g); s.start(0, Math.random() * buf.duration);
+      L.src = s;
+    }).catch((e) => console.warn('ambience', name, e));
+    return L;
   }
 }

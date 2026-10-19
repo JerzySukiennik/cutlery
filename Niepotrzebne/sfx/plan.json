@@ -1,0 +1,541 @@
+{
+ "tap_0": {
+  "src": 85706,
+  "seg": 0,
+  "tail": 0.12
+ },
+ "tap_1": {
+  "src": 85706,
+  "seg": 1,
+  "tail": 0.12
+ },
+ "tap_2": {
+  "src": 85706,
+  "seg": 2,
+  "tail": 0.12
+ },
+ "tap_3": {
+  "src": 85706,
+  "seg": 3,
+  "tail": 0.12
+ },
+ "tap_4": {
+  "src": 85706,
+  "seg": 4,
+  "tail": 0.12
+ },
+ "metal_a": {
+  "src": 846403,
+  "start": 0.1,
+  "max": 0.25
+ },
+ "metal_b": {
+  "src": 110110,
+  "start": 0,
+  "max": 0.5
+ },
+ "clink_0": {
+  "src": 444403,
+  "start": 0,
+  "max": 0.6
+ },
+ "clink_1": {
+  "src": 764728,
+  "seg": 0,
+  "tail": 0.12,
+  "max": 0.35
+ },
+ "clink_2": {
+  "src": 764728,
+  "seg": 2,
+  "tail": 0.15,
+  "max": 0.3
+ },
+ "clink_3": {
+  "src": 626743,
+  "start": 1.05,
+  "max": 0.6
+ },
+ "squish_0": {
+  "src": 269482,
+  "start": 0.07,
+  "max": 0.6
+ },
+ "squish_1": {
+  "src": 442772,
+  "start": 0,
+  "max": 0.45
+ },
+ "squish_2": {
+  "src": 536765,
+  "start": 0,
+  "max": 0.5
+ },
+ "squish_3": {
+  "src": 649982,
+  "start": 0.14,
+  "max": 0.5
+ },
+ "squish_4": {
+  "src": 495118,
+  "start": 0.05,
+  "max": 0.45
+ },
+ "bstep_0": {
+  "src": 703678,
+  "seg": 0,
+  "tail": 0.1
+ },
+ "bstep_1": {
+  "src": 703678,
+  "start": 0.82,
+  "max": 0.35
+ },
+ "bstep_2": {
+  "src": 703678,
+  "start": 1.3,
+  "max": 0.35
+ },
+ "bstep_3": {
+  "src": 732392,
+  "start": 2.3,
+  "max": 0.45
+ },
+ "soft_0": {
+  "src": 841274,
+  "start": 0,
+  "max": 0.35
+ },
+ "soft_1": {
+  "src": 653910,
+  "start": 0,
+  "max": 0.3
+ },
+ "soft_2": {
+  "src": 872227,
+  "start": 0.08,
+  "max": 0.3
+ },
+ "soft_3": {
+  "src": 405705,
+  "start": 0,
+  "max": 0.5
+ },
+ "plate_0": {
+  "src": 257939,
+  "seg": 1,
+  "tail": 0.3
+ },
+ "plate_1": {
+  "src": 830458,
+  "start": 0,
+  "max": 0.5
+ },
+ "plate_2": {
+  "src": 404922,
+  "start": 0,
+  "max": 0.6
+ },
+ "plate_3": {
+  "src": 568758,
+  "start": 0.12,
+  "max": 0.5
+ },
+ "plates_0": {
+  "src": 498573,
+  "seg": 1,
+  "tail": 0.3,
+  "max": 0.8
+ },
+ "plates_1": {
+  "src": 209009,
+  "start": 0,
+  "max": 0.5
+ },
+ "wood_0": {
+  "src": 704935,
+  "start": 0.83,
+  "max": 0.35
+ },
+ "wood_1": {
+  "src": 742356,
+  "start": 0,
+  "max": 0.2
+ },
+ "wood_2": {
+  "src": 629987,
+  "seg": 1,
+  "tail": 0.1
+ },
+ "wood_3": {
+  "src": 692828,
+  "start": 0,
+  "max": 0.3
+ },
+ "woodheavy_0": {
+  "src": 449955,
+  "start": 0,
+  "max": 0.5
+ },
+ "woodheavy_1": {
+  "src": 836521,
+  "start": 1.23,
+  "max": 0.6
+ },
+ "woodheavy_2": {
+  "src": 325274,
+  "seg": 0,
+  "tail": 0.4
+ },
+ "stab_0": {
+  "src": 179222,
+  "start": 0.15,
+  "max": 0.5
+ },
+ "stab_1": {
+  "src": 344404,
+  "start": 0.36,
+  "max": 0.35
+ },
+ "stab_2": {
+  "src": 411742,
+  "seg": 0,
+  "tail": 0.1
+ },
+ "pull_0": {
+  "src": 411742,
+  "seg": 1,
+  "tail": 0.15
+ },
+ "drawer_0": {
+  "src": 237378,
+  "seg": 0,
+  "tail": 0.1
+ },
+ "slice_0": {
+  "src": 142299,
+  "seg": 5,
+  "tail": 0.05
+ },
+ "slice_1": {
+  "src": 142299,
+  "seg": 6,
+  "tail": 0.05
+ },
+ "slice_2": {
+  "src": 718595,
+  "start": 0.18,
+  "max": 0.5
+ },
+ "chop_0": {
+  "src": 862542,
+  "start": 0.08,
+  "max": 0.4
+ },
+ "cut_0": {
+  "src": 540266,
+  "start": 0,
+  "max": 0.6
+ },
+ "cut_1": {
+  "src": 187354,
+  "start": 0,
+  "max": 0.6
+ },
+ "latch_0": {
+  "src": 56243
+ },
+ "latch_1": {
+  "src": 56244,
+  "start": 0,
+  "max": 0.5
+ },
+ "switch_0": {
+  "src": 863876,
+  "seg": 0,
+  "tail": 0.05
+ },
+ "tick_0": {
+  "src": 54407
+ },
+ "drag_0": {
+  "src": 146805,
+  "start": 0,
+  "max": 0.9,
+  "fade": 0.15
+ },
+ "drag_1": {
+  "src": 792553,
+  "start": 0.2,
+  "max": 0.8,
+  "fade": 0.15
+ },
+ "glass_0": {
+  "src": 171939,
+  "start": 0,
+  "max": 0.6
+ },
+ "glass_1": {
+  "src": 427389,
+  "start": 0.08,
+  "max": 0.4
+ },
+ "glass_2": {
+  "src": 235497,
+  "seg": 1,
+  "tail": 0.2
+ },
+ "door_0": {
+  "src": 402141,
+  "start": 0,
+  "max": 1.2,
+  "fade": 0.15
+ },
+ "doorclose_0": {
+  "src": 829756,
+  "start": 0.41,
+  "max": 0.7
+ },
+ "creak_0": {
+  "src": 572645,
+  "start": 0,
+  "max": 0.84,
+  "fade": 0.1
+ },
+ "creak_1": {
+  "src": 506665,
+  "start": 0,
+  "max": 0.7,
+  "fade": 0.1
+ },
+ "pot_0": {
+  "src": 389172,
+  "start": 0.5,
+  "max": 0.7
+ },
+ "pot_1": {
+  "src": 130588,
+  "seg": 0,
+  "tail": 0.2
+ },
+ "cloth_0": {
+  "src": 19291,
+  "seg": 1,
+  "tail": 0.05,
+  "fade": 0.12
+ },
+ "cloth_1": {
+  "src": 761018,
+  "start": 0,
+  "max": 1.0,
+  "fade": 0.12
+ },
+ "clothdrop_0": {
+  "src": 669674,
+  "start": 0.56,
+  "max": 0.6
+ },
+ "pluck_0": {
+  "src": 241869,
+  "start": 0,
+  "max": 0.4
+ },
+ "pluck_1": {
+  "src": 718596,
+  "start": 0,
+  "max": 0.6
+ },
+ "waterdrop_0": {
+  "src": 174718,
+  "start": 0,
+  "max": 0.45
+ },
+ "drip_0": {
+  "src": 546279,
+  "seg": 0,
+  "tail": 0.08
+ },
+ "drip_1": {
+  "src": 75345,
+  "start": 0,
+  "max": 0.15
+ },
+ "splash_0": {
+  "src": 321490,
+  "seg": 0,
+  "tail": 0.2
+ },
+ "splash_1": {
+  "src": 841834,
+  "start": 0,
+  "max": 0.4
+ },
+ "sizzle_0": {
+  "src": 540080,
+  "start": 0,
+  "max": 1.6,
+  "fade": 0.4
+ },
+ "toastdown_0": {
+  "src": 119108,
+  "start": 0.72,
+  "max": 0.6
+ },
+ "toastpop_0": {
+  "src": 444430,
+  "seg": 0,
+  "tail": 0.15
+ },
+ "toastpop_1": {
+  "src": 56268,
+  "start": 0,
+  "max": 0.3
+ },
+ "ding_0": {
+  "src": 685111,
+  "start": 0.79,
+  "max": 1.6,
+  "fade": 0.4
+ },
+ "twang_0": {
+  "src": 486384,
+  "seg": 1,
+  "tail": 0.1
+ },
+ "twang_1": {
+  "src": 486383,
+  "seg": 2,
+  "tail": 0.3
+ },
+ "spring_0": {
+  "src": 472478,
+  "start": 0,
+  "max": 0.5
+ },
+ "ui_click": {
+  "src": 478197
+ },
+ "ui_select": {
+  "src": 54407
+ },
+ "ui_toggle": {
+  "src": 388958,
+  "start": 0,
+  "max": 0.25
+ },
+ "ui_open": {
+  "src": 397551,
+  "start": 0,
+  "max": 0.75,
+  "fade": 0.1
+ },
+ "ui_close": {
+  "src": 119128,
+  "start": 0,
+  "max": 0.8,
+  "fade": 0.15
+ },
+ "ui_back": {
+  "src": 119126,
+  "start": 0,
+  "max": 0.8,
+  "fade": 0.15
+ },
+ "ui_chime": {
+  "src": 66876,
+  "start": 0,
+  "max": 0.3
+ },
+ "ui_bong": {
+  "src": 593220,
+  "start": 0.16,
+  "max": 0.6
+ },
+ "amb_birds": {
+  "src": 608154,
+  "start": 6,
+  "end": 48,
+  "loop": 3,
+  "peak": -6
+ },
+ "amb_room": {
+  "src": 338115,
+  "start": 0.5,
+  "end": 50.5,
+  "loop": 3,
+  "peak": -6
+ },
+ "amb_fridge": {
+  "src": 215144,
+  "start": 0.4,
+  "end": 30.2,
+  "loop": 2,
+  "peak": -6
+ },
+ "amb_night": {
+  "src": 522299,
+  "start": 30,
+  "end": 90,
+  "loop": 3,
+  "peak": -6
+ },
+ "whoosh_0": {
+  "src": 352719
+ },
+ "whoosh_1": {
+  "src": 585257,
+  "start": 0.06
+ },
+ "swish_0": {
+  "src": 389590
+ },
+ "swish_1": {
+  "src": 352719,
+  "start": 0.04,
+  "max": 0.3
+ },
+ "crack_0": {
+  "src": 262635,
+  "start": 0.46
+ },
+ "crack_1": {
+  "src": 624163,
+  "seg": 0,
+  "tail": 0.1
+ },
+ "trap_0": {
+  "src": 278151
+ },
+ "trap_1": {
+  "src": 752070,
+  "max": 0.7
+ },
+ "spread_0": {
+  "src": 784293,
+  "start": 0.08,
+  "end": 0.5
+ },
+ "spread_1": {
+  "src": 784293,
+  "start": 0.62,
+  "end": 1.0
+ },
+ "spread_2": {
+  "src": 119103,
+  "start": 2.66,
+  "end": 2.98
+ },
+ "wobble_0": {
+  "src": 181918,
+  "start": 0.58,
+  "max": 1.0,
+  "fade": 0.3
+ },
+ "poof_0": {
+  "src": 714257
+ },
+ "poof_1": {
+  "src": 532234,
+  "start": 0.04
+ }
+}

@@ -30,7 +30,7 @@ export default {
   chars: ['fork', 'knife', 'butter'],
   lead: 'butter',
   music: 'night',
-  ambience: 'quiet',
+  ambience: 'night',
   abilities: ['stab', 'carry', 'carryButter', 'plant', 'cut', 'squish', 'melt', 'cling', 'smear', 'spread', 'bridge'],
   ambient: 0.12,
   killY: 2,
