@@ -4,7 +4,7 @@ A wordless 2.5D co-op platformer in the spirit of Unravel Two, about Fork, Knife
 
 ## The house
 
-The game opens in a dollhouse cut open from the front. Everyone who is playing at that moment is in the same house and can see each other walk around. You pick one character at the door: Fork, Knife or Butter.
+The game opens in a dollhouse cut open from the front. Everyone who is playing at that moment is in the same house and can see each other walk around. At the door you say how many of you are playing, then pick a character from that story: Butter alone, Fork or Knife for two, any of the three for three. You start on that story's floor.
 
 Each floor is one story path and each room holds one chapter's portal. A portal starts when the right characters stand on its plates: Butter alone on the ground floor, Fork and Knife together on the first floor, all three on the top floor. Groups are matched into a private online room automatically. Chapters open in order within each path, and everyone standing on a portal needs that chapter open.
 
@@ -34,6 +34,6 @@ A/D walk, W or Space jump (hold for higher), E or Shift use your tool, S squish 
 
 ## Tech
 
-three.js 0.169 and Rapier 2D 0.14 from a CDN, ES modules, no build step. Kinematic character controllers for everything that moves, a depth-of-field grade pass, procedural props and textures, a felt piano rendered in the browser with OfflineAudioContext, recorded foley and room loops from freesound.org (all CC0, listed in `assets/audio/CREDITS.md`). Online play runs on Firebase Realtime Database: house presence, the shared lift, invitations and per-chapter rooms.
+three.js 0.169 and Rapier 2D 0.14 from a CDN, ES modules, no build step. Kinematic character controllers for everything that moves, a depth-of-field grade pass, procedural props and textures, recorded music (Satie and Schumann piano recordings in the public domain, acoustic tracks by Kevin MacLeod under CC BY 4.0, listed in `assets/music/CREDITS.md`) that crossfades between rooms, a felt piano rendered in the browser with OfflineAudioContext for stings and the toy piano, recorded foley and room loops from freesound.org (all CC0, listed in `assets/audio/CREDITS.md`). Online play runs on Firebase Realtime Database: house presence, the shared lift, invitations and per-chapter rooms.
 
 Run locally with any static server, for example `python3 Niepotrzebne/serve.py 8473`. Add `?net=local` to test the house and rooms between tabs of one browser without Firebase, `?ch=d2` to jump straight into a chapter.

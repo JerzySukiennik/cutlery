@@ -102,11 +102,13 @@ export class UI {
         <footer class="menu-foot">
           <button class="link" data-act="settings">Settings</button>
           <button class="link" data-act="controls">Controls</button>
+          <button class="link" data-act="credits">Credits</button>
         </footer>
       </div>`;
     this.show(this.menu);
     $('[data-act=settings]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('settings'); };
     $('[data-act=controls]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('controls'); };
+    $('[data-act=credits]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('credits'); };
     this.entryCount();
   }
 
@@ -192,6 +194,12 @@ export class UI {
       el.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { this.g.renderer.locked = true; this.g.renderer.setQuality(b.dataset.q); this.g.renderer.resize(); this.side('settings'); });
     } else if (kind === 'controls') {
       el.innerHTML = `<div class="panel"><h2>Controls</h2>${this.controlsHTML()}</div>`;
+    } else if (kind === 'credits') {
+      el.innerHTML = `<div class="panel credits"><h2>Credits</h2>
+        <p class="muted">Piano: Erik Satie, Gymnopédie No. 1, played by Robin Alciatore. Robert Schumann, Kinderszenen, recorded by Musopen. Both public domain.</p>
+        <p class="muted">Cattails, Somewhere Sunny, Clear Air, Morning and Almost Bliss by Kevin MacLeod (incompetech.com), licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+        <p class="muted">Sounds: recordings from freesound.org, all CC0. The full list is in <a href="https://github.com/JerzySukiennik/cutlery/blob/main/assets/audio/CREDITS.md" target="_blank" rel="noopener">the repository</a>.</p>
+      </div>`;
     } else el.innerHTML = '';
   }
 

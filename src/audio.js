@@ -1,4 +1,5 @@
-// Audio: recorded foley (freesound.org, CC0), recorded room loops, a rendered felt piano and generative chapter music.
+// Audio: recorded foley and room loops (freesound.org, CC0), recorded music per room with crossfades, and a rendered felt piano for stings and the toy piano.
+const ASSETS = new URL('../assets/', import.meta.url).href;
 const seq = (s, k) => Array.from({ length: k }, (_, i) => `${s}_${i}`);
 const FILES = {
   squish: seq('squish', 5),
@@ -60,19 +61,31 @@ const AMB = {
 };
 const AMB_PAN = { birds: -0.35, night: 0.25 };
 
-const THEMES = {
-  menu: { bpm: 62, key: 64, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 11], [-7, -3, 0, 4, 7], [-5, -1, 2, 4, 9]], pat: 'arp', mel: 0.35, oct: 0 },
-  ch1: { bpm: 58, key: 62, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 10], [-5, -1, 2, 7, 11], [-3, 2, 4, 7, 9]], pat: 'box', mel: 0.25, oct: 12 },
-  ch2: { bpm: 70, key: 65, prog: [[0, 4, 7, 12, 14], [-8, -5, -1, 4, 7], [-7, -3, 0, 5, 9], [-5, -1, 2, 7, 11]], pat: 'walk', mel: 0.4, oct: 0 },
-  ch3: { bpm: 74, key: 67, prog: [[0, 4, 7, 11, 14], [-5, -1, 2, 7, 11], [-8, -5, -1, 2, 7], [-7, -3, 0, 4, 11]], pat: 'arp', mel: 0.55, oct: 0 },
-  pantry: { bpm: 62, key: 57, prog: [[0, 3, 7, 10, 14], [-4, 0, 3, 7, 10], [-7, -4, 0, 3, 8], [-5, -2, 2, 5, 10]], pat: 'box', mel: 0.3, oct: 12 },
-  living: { bpm: 66, key: 60, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 11], [-8, -5, -1, 4, 7], [-5, -1, 2, 5, 9]], pat: 'arp', mel: 0.5, oct: 0 },
-  dining: { bpm: 72, key: 62, prog: [[0, 4, 7, 9, 14], [-5, -1, 2, 7, 11], [-3, 0, 4, 7, 12], [-7, -3, 0, 4, 11]], pat: 'walk', mel: 0.45, oct: 0 },
-  study: { bpm: 64, key: 58, prog: [[0, 4, 7, 11, 14], [-1, 2, 5, 9, 12], [-3, 0, 4, 7, 11], [-5, -1, 2, 5, 9]], pat: 'box', mel: 0.4, oct: 0 },
-  washing: { bpm: 78, key: 65, prog: [[0, 4, 7, 12, 16], [-3, 0, 4, 9, 12], [-7, -3, 0, 5, 9], [-5, -1, 2, 7, 11]], pat: 'arp', mel: 0.5, oct: 12 },
-  night: { bpm: 54, key: 60, prog: [[0, 3, 7, 10, 14], [-4, 0, 3, 7, 12], [-2, 2, 5, 9, 12], [-5, -1, 2, 7, 10]], pat: 'chord', mel: 0.35, oct: 0 },
-  end: { bpm: 60, key: 67, prog: [[0, 4, 7, 11, 14], [-3, 0, 4, 7, 14], [-7, -3, 0, 4, 11], [-5, -1, 2, 7, 14]], pat: 'chord', mel: 0.6, oct: 0 },
+const MUSIC = {
+  menu: ['gymnopedie1'],
+  end: ['gymnopedie1'],
+  ch1: ['foreign_lands', 'pleading_child'],
+  pantry: ['cattails'],
+  living: ['traumerei'],
+  ch2: ['somewhere_sunny'],
+  dining: ['clear_air'],
+  study: ['curious_story', 'fireside'],
+  ch3: ['morning'],
+  washing: ['almost_bliss'],
+  night: ['child_asleep', 'poet_speaks'],
 };
+const ROOT = { gymnopedie1: 62, foreign_lands: 67, pleading_child: 62, curious_story: 62, fireside: 65, traumerei: 65, child_asleep: 64, poet_speaks: 67, cattails: 69, somewhere_sunny: 60, clear_air: 67, morning: 64, almost_bliss: 69 };
+
+let silent = null;
+function silence() {
+  if (silent) return silent;
+  const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  s(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); s(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, n * 2, true);
+  silent = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  return silent;
+}
 
 export class Audio {
   constructor() {
@@ -82,7 +95,7 @@ export class Audio {
     this.vol = { master: 0.9, music: 0.55, sfx: 0.9 };
     this.started = false;
     this.music = null;
-    this.amb = [];
+    this.intensity = 0.7;
     try { const s = JSON.parse(localStorage.getItem('cutlery.vol') || 'null'); if (s) Object.assign(this.vol, s); } catch (e) {}
   }
 
@@ -104,20 +117,29 @@ export class Audio {
     this.felt.connect(this.reverb);
     this.reverb.connect(this.revGain).connect(this.master);
     this.sfxRev = c.createGain(); this.sfxRev.gain.value = 0.12; this.sfxRev.connect(this.reverb);
+    this.recBus = c.createGain(); this.recBus.gain.value = this.vol.music; this.recBus.connect(this.master);
+    this.decks = [this.deck(), this.deck()];
     const names = new Set(Object.values(FILES).flat());
     let done = 0;
     await Promise.all([...names].map(async (n) => {
       try {
-        const r = await fetch(`assets/audio/${n}.mp3`);
+        const r = await fetch(`${ASSETS}audio/${n}.mp3`);
         const ab = await r.arrayBuffer();
         this.buffers[n] = await new Promise((res, rej) => c.decodeAudioData(ab, res, rej));
       } catch (e) {}
       done++;
       if (onProgress) onProgress(done / names.size);
     }));
-    this.renderPiano().catch((e) => console.warseq('piano', e));
+    this.renderPiano().catch((e) => console.warn('piano', e));
     if (onProgress) onProgress(1);
-    const unlock = () => { if (c.state !== 'running') c.resume(); };
+    const unlock = () => {
+      if (c.state !== 'running') c.resume();
+      for (const d of this.decks) {
+        if (d.want) this.go(d);
+        else if (!d.primed && !d.el.getAttribute('src')) { d.el.src = silence(); d.el.play().then(() => d.el.pause()).catch(() => {}); }
+        d.primed = true;
+      }
+    };
     addEventListener('pointerdown', unlock, { capture: true });
     addEventListener('keydown', unlock, { capture: true });
     addEventListener('touchend', unlock, { capture: true });
@@ -184,13 +206,12 @@ export class Audio {
     const out = [];
     for (let i = 0; i < notes.length; i += 5) out.push(...await Promise.all(notes.slice(i, i + 5).map(one)));
     this.piano = out.sort((a, b) => a.midi - b.midi);
-    if (this.wantTheme) { const t = this.wantTheme; this.wantTheme = null; this.startMusic(t); }
   }
 
   setVol(k, v) {
     this.vol[k] = v;
     if (k === 'master' && this.master) this.master.gain.value = v;
-    if (k === 'music' && this.musicBus) this.musicBus.gain.value = v;
+    if (k === 'music' && this.musicBus) { this.musicBus.gain.value = v; this.recBus.gain.value = v; }
     if (k === 'sfx' && this.sfxBus) this.sfxBus.gain.value = v;
     try { localStorage.setItem('cutlery.vol', JSON.stringify(this.vol)); } catch (e) {}
   }
@@ -233,18 +254,18 @@ export class Audio {
 
   sting() {
     if (!this.ctx || this.ctx.state !== 'running') return;
-    const th = (this.music && this.music.th) || THEMES.menu;
-    const chord = th.prog[((this.music && this.music.bar) || 0) % th.prog.length];
-    const base = th.key + 12;
-    [0, 1, 2, 3, 4].forEach((i) => this.note(base + chord[i % chord.length] + (i > 2 ? 12 : 0), 0.32 - i * 0.03, i * 0.075, this.sfxBus));
+    const base = this.root() + 12;
+    [0, 7, 12, 19, 24].forEach((s, i) => this.note(base + s, 0.3 - i * 0.035, i * 0.075, this.sfxBus));
   }
 
   checkpoint() {
     if (!this.ctx || this.ctx.state !== 'running') return;
-    const th = (this.music && this.music.th) || THEMES.menu;
-    this.note(th.key + 24, 0.22, 0, this.sfxBus);
-    this.note(th.key + 31, 0.16, 0.12, this.sfxBus);
+    const r = this.root();
+    this.note(r + 24, 0.22, 0, this.sfxBus);
+    this.note(r + 31, 0.16, 0.12, this.sfxBus);
   }
+
+  root() { return (this.music && this.music.root) || 62; }
 
   key(midi) {
     if (!this.ctx || this.ctx.state !== 'running') return;
@@ -263,61 +284,79 @@ export class Audio {
     this.play(best.buf, vel, (midi - 64) / 60, rate, when, bus || this.musicBus);
   }
 
+  deck() {
+    const c = this.ctx, el = document.createElement('audio');
+    el.preload = 'auto';
+    const g = c.createGain(); g.gain.value = 0;
+    c.createMediaElementSource(el).connect(g).connect(this.recBus);
+    const d = { el, g, token: 0, want: false, onEnd: null };
+    el.addEventListener('ended', () => { if (d.onEnd) d.onEnd(); });
+    return d;
+  }
+
+  go(d) {
+    const p = d.el.play();
+    d.want = true;
+    if (p && p.then) p.then(() => { d.want = false; }).catch(() => {});
+  }
+
+  level() { return 0.6 + 0.4 * this.intensity; }
+
   startMusic(theme) {
     if (!this.ctx) return;
-    if (!this.piano.length) { this.wantTheme = theme; return; }
     if (this.music && this.music.theme === theme) return;
-    this.stopMusic();
-    const th = THEMES[theme] || THEMES.menu;
-    const m = { theme, th, next: this.ctx.currentTime + 0.4, bar: 0, motif: this.makeMotif(th), intensity: 0.7, alive: true };
-    this.music = m;
-    const loop = () => {
-      if (!m.alive) return;
-      const c = this.ctx;
-      while (m.next < c.currentTime + 0.6) { this.scheduleBar(m, m.next); m.next += 4 * 60 / th.bpm; m.bar++; }
-      m.timer = setTimeout(loop, 150);
+    const prev = this.music;
+    const d = this.decks.find((x) => x !== this.lastDeck) || this.decks[0];
+    if (this.lastDeck) this.fadeOut(this.lastDeck, 1.2);
+    this.lastDeck = d;
+    const m = this.music = { theme, list: MUSIC[theme] || MUSIC.menu, i: 0, deck: d, root: 62 };
+    this.track(m, prev ? 0.9 : 0);
+  }
+
+  track(m, delay = 0) {
+    const d = m.deck, c = this.ctx, tok = ++d.token;
+    const name = m.list[m.i % m.list.length];
+    m.root = ROOT[name] || 62;
+    d.want = false;
+    d.el.loop = m.list.length === 1;
+    d.onEnd = () => {
+      if (d.token !== tok || this.music !== m) return;
+      m.i++;
+      setTimeout(() => { if (d.token === tok && this.music === m) this.track(m); }, 1500);
     };
-    loop();
+    if (!d.el.paused) delay = Math.max(delay, 0.4);
+    d.g.gain.cancelScheduledValues(c.currentTime);
+    d.g.gain.setTargetAtTime(0, c.currentTime, 0.08);
+    setTimeout(() => {
+      if (d.token !== tok) return;
+      d.el.src = `${ASSETS}music/${name}.mp3`;
+      const t = c.currentTime;
+      d.g.gain.cancelScheduledValues(t);
+      d.g.gain.setValueAtTime(0, t);
+      d.g.gain.linearRampToValueAtTime(this.level(), t + (delay ? 2.4 : 1.2));
+      this.go(d);
+    }, delay * 1000);
+  }
+
+  fadeOut(d, dur) {
+    const c = this.ctx, t = c.currentTime, tok = ++d.token;
+    d.want = false;
+    d.onEnd = null;
+    d.g.gain.cancelScheduledValues(t);
+    d.g.gain.setValueAtTime(d.g.gain.value, t);
+    d.g.gain.linearRampToValueAtTime(0, t + dur);
+    setTimeout(() => { if (d.token === tok) d.el.pause(); }, dur * 1000 + 80);
   }
 
   stopMusic() {
-    if (this.music) { this.music.alive = false; clearTimeout(this.music.timer); this.music = null; }
+    if (this.lastDeck) this.fadeOut(this.lastDeck, 1.0);
+    this.lastDeck = null;
+    this.music = null;
   }
 
-  setIntensity(v) { if (this.music) this.music.intensity = v; }
-
-  makeMotif(th) {
-    const mot = [];
-    for (let i = 0; i < 8; i++) mot.push({ beat: [0, 1, 1.5, 2, 3, 3.5][Math.floor(Math.random() * 6)], deg: Math.floor(Math.random() * 5), len: Math.random() < 0.5 ? 1 : 2 });
-    return mot.sort((a, b) => a.beat - b.beat).slice(0, 3 + Math.floor(Math.random() * 2));
-  }
-
-  scheduleBar(m, t) {
-    const th = m.th, beat = 60 / th.bpm;
-    const chord = th.prog[m.bar % th.prog.length];
-    const root = th.key + chord[0];
-    const sw = (b) => t + b * beat + (Math.random() - 0.5) * 0.012;
-    const hum = (v) => v * (0.85 + Math.random() * 0.3) * (0.55 + m.intensity * 0.45);
-    const bass = root - 24 + (root - 24 < 36 ? 12 : 0);
-    this.note(bass, hum(0.5), sw(0) - this.ctx.currentTime);
-    if (Math.random() < 0.6) this.note(bass + 7, hum(0.28), sw(2) - this.ctx.currentTime);
-    const tones = chord.map((c) => th.key + c + th.oct);
-    const at = (b, midi, v) => this.note(midi, hum(v), sw(b) - this.ctx.currentTime);
-    if (th.pat === 'arp') {
-      const seq = [0, 1, 2, 3, 4, 3, 2, 1];
-      for (let i = 0; i < 8; i++) if (Math.random() < 0.55 + m.intensity * 0.4) at(i * 0.5, tones[seq[i]] + (i > 3 ? 0 : -12) + 12, 0.24);
-    } else if (th.pat === 'box') {
-      for (let i = 0; i < 8; i++) if (Math.random() < 0.35 + m.intensity * 0.35) at(i * 0.5, tones[(i * 3 + m.bar) % tones.length] + 12, 0.18);
-    } else if (th.pat === 'walk') {
-      for (let i = 0; i < 4; i++) if (Math.random() < 0.7) at(i + 0.5, tones[1 + (i % 3)], 0.22);
-    } else {
-      at(0, tones[1], 0.25); at(0.02, tones[2], 0.22); at(0.04, tones[3], 0.2);
-      if (Math.random() < 0.6) { at(2, tones[2], 0.2); at(2.03, tones[4], 0.18); }
-    }
-    if (m.bar % 8 === 0 && m.bar > 0 && Math.random() < 0.5) m.motif = this.makeMotif(th);
-    if (Math.random() < th.mel * (0.6 + m.intensity * 0.6) && m.bar % 4 !== 3) {
-      for (const n of m.motif) at(n.beat, tones[n.deg % tones.length] + 12 + (n.deg > 3 ? 0 : 12) - 12, 0.34);
-    }
+  setIntensity(v) {
+    this.intensity = v;
+    if (this.music && this.ctx) this.music.deck.g.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.8);
   }
 
   ambience(kind) {
@@ -342,7 +381,7 @@ export class Audio {
     const p = c.createStereoPanner ? c.createStereoPanner() : null;
     if (p) { p.pan.value = AMB_PAN[name] || 0; g.connect(p).connect(this.master); } else g.connect(this.master);
     const L = this.layers[name] = { g };
-    fetch(`assets/audio/amb_${name}.mp3`).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej))).then((buf) => {
+    fetch(`${ASSETS}audio/amb_${name}.mp3`).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej))).then((buf) => {
       const s = c.createBufferSource(); s.buffer = buf; s.loop = true;
       s.connect(g); s.start(0, Math.random() * buf.duration);
       L.src = s;

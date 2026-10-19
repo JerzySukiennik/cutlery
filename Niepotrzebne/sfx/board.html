@@ -48,11 +48,16 @@ button:disabled { opacity: .35; cursor: default; }
     <div class="amb" id="ambOld"></div>
     <div class="note" id="ambSrc"></div>
   </div>
+  <h2>Muzyka</h2>
+  <div class="row" style="grid-template-columns: 1fr">
+    <div class="amb" id="musNew"></div>
+    <div class="amb" id="musOld"></div>
+    <div class="note">Przełączanie między utworami to to samo przejście co w grze (wyciszenie starego, wejście nowego).</div>
+  </div>
   <div id="list"></div>
 </main>
 <script type="module">
 const realFetch = window.fetch.bind(window);
-window.fetch = (u, o) => realFetch(typeof u === 'string' && u.startsWith('assets/') ? '../../' + u : u, o);
 const { Audio: NewAudio } = await import('../../src/audio.js');
 const { Audio: OldAudio } = await import('./old/audio-old.js');
 const data = await (await realFetch('board-data.json')).json();
@@ -111,6 +116,17 @@ for (const [title, rows] of GROUPS) {
     r.append(nm, main, takes, src);
     list.append(r);
   }
+}
+
+const MUS = [['menu', 'Dom'], ['ch1', 'Lodówka'], ['pantry', 'Spiżarnia'], ['living', 'Salon'], ['ch2', 'Szuflada'], ['dining', 'Jadalnia'], ['study', 'Gabinet'], ['ch3', 'Śniadanie'], ['washing', 'Zmywanie'], ['night', 'Dobranoc']];
+const musNew = document.getElementById('musNew'), musOld = document.getElementById('musOld');
+const mbtn = [];
+const mstop = () => { mbtn.forEach((b) => b.classList.remove('on')); A.stopMusic(); O.stopMusic(); };
+for (const [k, pl] of MUS) {
+  const b = el('button', 'new', pl); b.onclick = () => { const on = b.classList.contains('on'); O.stopMusic(); mbtn.forEach((x) => x.classList.remove('on')); if (on) { A.stopMusic(); return; } A.startMusic(k); b.classList.add('on'); };
+  musNew.append(b); mbtn.push(b);
+  const o = el('button', '', pl + ' (stara)'); o.onclick = () => { const on = o.classList.contains('on'); A.stopMusic(); mbtn.forEach((x) => x.classList.remove('on')); if (on) { O.stopMusic(); return; } O.stopMusic(); O.startMusic(k); o.classList.add('on'); };
+  musOld.append(o); mbtn.push(o);
 }
 
 const KINDS = [['kitchen', 'Kuchnia'], ['fridge', 'Lodówka'], ['quiet', 'Dom, spiżarnia'], ['night', 'Noc (Goodnight)']];
