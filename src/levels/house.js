@@ -1,6 +1,6 @@
 // House kit: rooms and furniture beyond the kitchen — pantry, living room, dining room, study, sink and night lighting.
 import * as THREE from 'three';
-import { mesh, rbox, bx } from '../props.js';
+import { mesh, rbox, bx, labelWrap, turnedLeg } from '../props.js';
 import * as T from '../textures.js';
 
 const std = (o) => new THREE.MeshStandardMaterial(o);
@@ -77,18 +77,19 @@ export function sack(L, x, y, w, h, o = {}) {
   g.add(mesh(rbox(w, h * 0.85, o.d || 2.0, Math.min(w, h) * 0.3, 3), cloth, 0, h * 0.42, 0));
   g.add(mesh(new THREE.ConeGeometry(w * 0.32, h * 0.3, 10), cloth, 0, h * 0.95, 0));
   g.add(mesh(new THREE.TorusGeometry(w * 0.12, 0.03, 6, 12), mat('twine', () => std({ color: '#a7865a', roughness: 1 })), 0, h * 0.86, 0, { rx: Math.PI / 2 }));
-  if (o.label) g.add(mesh(new THREE.PlaneGeometry(w * 0.6, h * 0.3), std({ map: T.label({ text: o.label, bg: '#efe3c8', fg: '#7a4b2a', size: 70 }), roughness: 1 }), 0, h * 0.42, (o.d || 2.0) / 2 + 0.02, { cast: false }));
+  if (o.label) g.add(mesh(new THREE.PlaneGeometry(w * 0.6, h * 0.3), std({ map: T.label({ text: o.label, kicker: 'ORGANIC', sub: '1 kg', bg: '#efe3c8', fg: '#7a4b2a', size: 84, ty: 0.42, sy: 0.7, w: 512, h: Math.round(512 * (h * 0.3) / (w * 0.6)) }), roughness: 1 }), 0, h * 0.42, (o.d || 2.0) / 2 + 0.02, { cast: false }));
   if (o.col !== false) b.col(x, y, w, h * 0.85, 'cloth');
   return g;
 }
 
 export function tinCan(L, w, h, color = '#c0473a', text = 'Peas') {
   const g = new THREE.Group();
-  const M = L.m;
-  const body = mesh(new THREE.CylinderGeometry(w / 2, w / 2, h, 24), std({ map: T.label({ text, bg: color, fg: '#fff6e6', size: 80 }), roughness: 0.4 }), 0, h / 2, 0, { ry: -Math.PI / 2 });
-  g.add(body);
-  g.add(mesh(new THREE.CylinderGeometry(w / 2 + 0.02, w / 2 + 0.02, 0.08, 24), M.steel, 0, h, 0));
-  g.add(mesh(new THREE.CylinderGeometry(w / 2 + 0.02, w / 2 + 0.02, 0.08, 24), M.steel, 0, 0.04, 0));
+  const M = L.m, r = w / 2;
+  g.add(mesh(new THREE.CylinderGeometry(r, r, h, 36, 1, true), M.steel, 0, h / 2, 0));
+  g.add(labelWrap(r, h * 0.9, { text, kicker: 'GARDEN', sub: '400 g', bg: color, fg: '#fff6e6', size: 74, subSize: 34, ty: 0.4, sy: 0.7 }, h * 0.5));
+  g.add(mesh(new THREE.TorusGeometry(r, 0.03, 6, 28), M.steel, 0, h, 0, { rx: Math.PI / 2 }));
+  g.add(mesh(new THREE.CylinderGeometry(r * 0.8, r * 0.8, 0.06, 24), M.steel, 0, h + 0.02, 0));
+  g.add(mesh(new THREE.CylinderGeometry(r, r, 0.06, 28), M.steel, 0, 0.03, 0));
   return g;
 }
 
@@ -210,7 +211,7 @@ export function pianoBody(L, x, w, keysY, topY) {
   b.add(mesh(rbox(w - 1.6, keysY - 0.6, 1.2, 0.12), lacquer, x + w / 2, (keysY - 0.6) / 2 + 0.3, -1.6, { cast: false }));
   b.add(mesh(rbox(w, 0.35, 3.2, 0.06), lacquer, x + w / 2, keysY - 0.68, -0.4));
   b.add(mesh(rbox(w - 1.2, 0.9, 0.2, 0.05), lacquer, x + w / 2, keysY + 0.55, -1.3));
-  b.add(mesh(rbox(3.2, 2.2, 0.08, 0.05), std({ map: T.label({ text: '♪ ♫ ♪', sub: 'Nocturne', bg: '#f4ecd9', fg: '#3b2a1f', size: 90 }), roughness: 0.9 }), x + w / 2, keysY + 2.4, -1.25, { rx: -0.25 }));
+  b.add(mesh(rbox(3.2, 2.2, 0.08, 0.05), std({ map: T.sheet(), roughness: 0.9 }), x + w / 2, keysY + 2.4, -1.25, { rx: -0.25 }));
   for (const px of [x + w / 2 - 0.6, x + w / 2 + 0.6]) b.add(mesh(rbox(0.5, 0.12, 0.9, 0.04), M.brass, px, 0.25, 0.6));
 }
 
@@ -333,7 +334,7 @@ export function chair(L, x, y0, o = {}) {
   const wood = o.mat ? M[o.mat] : M.woodTable;
   const seatY = o.seatY || 4.6, backTop = o.backTop || 9.6, w = o.w || 3.0;
   b.add(mesh(rbox(w, 0.3, 3.0, 0.06), wood, x + w / 2, y0 + seatY - 0.15, -0.2));
-  for (const lx of [x + 0.2, x + w - 0.2]) b.add(mesh(bx(0.25, seatY - 0.3, 0.25), wood, lx, y0 + (seatY - 0.3) / 2, 0.9));
+  for (const lx of [x + 0.2, x + w - 0.2]) b.add(mesh(turnedLeg(seatY - 0.3, 0.14), wood, lx, y0, 0.9));
   const bx0 = o.backRight ? x + w - 0.35 : x;
   b.add(mesh(bx(0.35, backTop - seatY, 0.35), wood, bx0 + 0.175, y0 + seatY + (backTop - seatY) / 2, -1.4));
   for (let i = 0; i < 3; i++) b.add(mesh(bx(0.3, 0.3, 2.4), wood, bx0 + 0.175, y0 + seatY + 1.5 + i * 1.3, -0.4));
@@ -360,7 +361,7 @@ export function diningTable(L, x, w, top, o = {}) {
     b.add(g);
     b.col(x - 0.12, o.leftCloth, 0.12, drop, 'soft');
   }
-  for (const lx of [x + 0.8, x + w - 0.8]) b.add(mesh(bx(0.5, top - 0.4, 0.5), M.woodTable, lx, (top - 0.4) / 2, 2.0));
+  for (const lx of [x + 0.8, x + w - 0.8]) b.add(mesh(turnedLeg(top - 0.4, 0.26), M.woodTable, lx, 0, 2.0));
   b.col(x, top - 0.42, w, 0.44, 'cloth');
 }
 

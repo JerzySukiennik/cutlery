@@ -1,7 +1,10 @@
-// Procedural canvas textures for the kitchen: tiles, wood, stone, bread, cheese, labels, cloth, sky.
+// Procedural canvas textures for the kitchen: tiles, wood, stone, bread, cheese, printed packaging, sheet music, cloth, sky.
 import * as THREE from 'three';
 
 const cache = new Map();
+const painters = [];
+const SERIF = 'Fraunces, Georgia, "Times New Roman", serif';
+const SANS = '"Instrument Sans", Helvetica, Arial, sans-serif';
 
 function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -44,6 +47,34 @@ function memo(key, fn) {
   return cache.get(key);
 }
 
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
+}
+
+function refreshAll() { for (const p of painters) { p.paint(); p.t.needsUpdate = true; } }
+
+let fontP = null;
+function fontsLoaded() {
+  if (fontP) return fontP;
+  const loads = document.fonts ? ['600 64px Fraunces', 'italic 600 64px Fraunces', '500 24px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => null)) : [];
+  fontP = Promise.all(loads).then(refreshAll);
+  return fontP;
+}
+
+function printed(W, H, paint) {
+  const [c, g] = canvas(W, H);
+  const run = () => paint(g, W, H);
+  run();
+  const t = tex(c, { clamp: true });
+  painters.push({ t, paint: run });
+  fontsLoaded();
+  return t;
+}
+
 export function tiles(base = '#f1ebe0', grout = '#c9bfae') {
   return memo('tiles' + base, () => {
     const W = 1024, H = 1024, cols = 4, rows = 8, tw = W / cols, th = H / rows;
@@ -82,14 +113,6 @@ export function tiles(base = '#f1ebe0', grout = '#c9bfae') {
   });
 }
 
-function roundRect(g, x, y, w, h, r) {
-  g.beginPath();
-  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
-  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
-  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
-}
-
 export function wood(light = '#c58f5c', dark = '#8a5a34', seed = 3, planks = 0) {
   return memo('wood' + light + dark + seed + planks, () => {
     const W = 1024, H = 512;
@@ -116,8 +139,7 @@ export function wood(light = '#c58f5c', dark = '#8a5a34', seed = 3, planks = 0) 
       }
     }
     g.putImageData(id, 0, 0);
-    const t = tex(c);
-    return t;
+    return tex(c);
   });
 }
 
@@ -209,25 +231,235 @@ export function cloth(a = '#f4efe6', b = '#6f8fbf') {
   });
 }
 
+function paperGrain(g, W, H, amt, seed) {
+  const r = rng(seed);
+  for (let i = 0; i < W * H / 180; i++) {
+    g.fillStyle = r() < 0.5 ? `rgba(40,25,10,${amt * r()})` : `rgba(255,255,255,${amt * r()})`;
+    g.fillRect(r() * W, r() * H, 1 + r(), 1 + r());
+  }
+}
+
+function wear(g, W, H, a) {
+  const v = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+  v.addColorStop(0, 'rgba(60,40,20,0)'); v.addColorStop(1, `rgba(60,40,20,${a})`);
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+
+function fit(g, text, make, px, maxW) {
+  let s = px;
+  g.font = make(s);
+  while (s > px * 0.45 && g.measureText(text).width > maxW) { s -= 1; g.font = make(s); }
+  return s;
+}
+
+function spaced(g, text, x, y, gap) {
+  const chars = [...text];
+  const ws = chars.map((ch) => g.measureText(ch).width);
+  let cx = x - (ws.reduce((a, b) => a + b, 0) + gap * (chars.length - 1)) / 2;
+  g.textAlign = 'left';
+  chars.forEach((ch, i) => { g.fillText(ch, cx, y); cx += ws[i] + gap; });
+  g.textAlign = 'center';
+}
+
+function emblem(g, x, y, R, kind, col) {
+  g.save();
+  g.fillStyle = col; g.strokeStyle = col;
+  if (kind === 'star') {
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? R * 0.45 : R; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+    g.closePath(); g.fill();
+  } else if (kind === 'sun') {
+    g.beginPath(); g.arc(x, y, R * 0.55, 0, 7); g.fill();
+    g.lineWidth = R * 0.14; g.lineCap = 'round';
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.beginPath(); g.moveTo(x + Math.cos(a) * R * 0.75, y + Math.sin(a) * R * 0.75); g.lineTo(x + Math.cos(a) * R, y + Math.sin(a) * R); g.stroke(); }
+  } else if (kind === 'leaf') {
+    g.beginPath(); g.ellipse(x, y, R * 0.45, R, 0.5, 0, 7); g.fill();
+    g.lineWidth = R * 0.09; g.beginPath(); g.moveTo(x - R * 0.2, y + R * 0.7); g.lineTo(x + R * 0.25, y - R * 0.6); g.stroke();
+  } else if (kind === 'drop') {
+    g.beginPath(); g.moveTo(x, y - R); g.quadraticCurveTo(x + R * 0.9, y + R * 0.1, x, y + R * 0.8); g.quadraticCurveTo(x - R * 0.9, y + R * 0.1, x, y - R); g.fill();
+  }
+  g.restore();
+}
+
+function paintLabel(g, W, H, s) {
+  const k = W / 512, ink = s.fg || '#3b2a1f', alt = s.ink || ink;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.fillStyle = s.bg || '#f3ead8'; g.fillRect(0, 0, W, H);
+  if (s.band) { g.fillStyle = s.band; g.fillRect(0, H * (s.bandY ?? 0.64), W, H); }
+  if (s.stripe) { g.fillStyle = s.stripe; g.fillRect(0, H * 0.05, W, H * 0.045); g.fillRect(0, H * 0.9, W, H * 0.045); }
+  if (s.dots) { g.fillStyle = s.dots; const r = rng(5); for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(r() * W, r() * H, 4.5 * k, 0, 7); g.fill(); } }
+  paperGrain(g, W, H, 0.09, 9);
+  if (s.frame !== false) {
+    g.strokeStyle = alt; g.globalAlpha = 0.55; g.lineWidth = 2.2 * k; g.strokeRect(W * 0.04, H * 0.04, W * 0.92, H * 0.92);
+    g.lineWidth = 0.9 * k; g.strokeRect(W * 0.058, H * 0.058, W * 0.884, H * 0.884);
+    g.globalAlpha = 1;
+  }
+  g.fillStyle = alt; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (s.kicker) {
+    g.font = `600 ${Math.round(20 * k)}px ${SANS}`; g.globalAlpha = 0.85;
+    spaced(g, s.kicker, W / 2, H * (s.ky ?? 0.14), 3 * k);
+    g.globalAlpha = 1;
+  }
+  if (s.emblem) emblem(g, W / 2, H * (s.ey ?? 0.25), H * (s.eR ?? 0.07), s.emblem, s.emblemCol || alt);
+  if (s.text) {
+    const make = (px) => `${s.italic ? 'italic ' : ''}${s.weight || 600} ${px}px ${s.font || SERIF}`;
+    const px = fit(g, s.text, make, (s.size || 64) * k, W * 0.82);
+    g.font = make(px); g.fillStyle = s.textCol || ink;
+    g.fillText(s.text, W / 2, H * (s.ty ?? 0.44));
+  }
+  if (s.sub) {
+    const make = (px) => `500 ${px}px ${SANS}`;
+    const px = fit(g, s.sub, make, (s.subSize || (s.size || 64) * 0.34) * k, W * 0.66);
+    g.font = make(px); g.fillStyle = s.subfg || alt;
+    g.fillText(s.sub, W / 2, H * (s.sy ?? 0.66));
+  }
+  if (s.fine) {
+    g.font = `500 ${Math.round(13 * k)}px ${SANS}`; g.globalAlpha = 0.7; g.fillStyle = s.subfg || alt;
+    spaced(g, s.fine, W / 2, H * (s.fy ?? 0.84), 0.6 * k);
+    g.globalAlpha = 1;
+  }
+  wear(g, W, H, 0.14);
+}
+
 export function label(spec) {
   const key = 'label' + JSON.stringify(spec);
-  return memo(key, () => {
-    const W = spec.w || 512, H = spec.h || 256;
-    const [c, g] = canvas(W, H);
-    g.fillStyle = spec.bg || '#f3ead8'; g.fillRect(0, 0, W, H);
-    if (spec.band) { g.fillStyle = spec.band; g.fillRect(0, H * 0.62, W, H * 0.38); }
-    if (spec.stripe) { g.fillStyle = spec.stripe; g.fillRect(0, H * 0.08, W, H * 0.06); g.fillRect(0, H * 0.86, W, H * 0.06); }
-    if (spec.dots) { g.fillStyle = spec.dots; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc((i * 97) % W, (i * 53) % H, 6, 0, 7); g.fill(); } }
-    g.fillStyle = spec.fg || '#3b2a1f';
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `${spec.italic ? 'italic ' : ''}${spec.weight || 600} ${spec.size || 64}px ${spec.font || 'Fraunces, Georgia, serif'}`;
-    g.fillText(spec.text || '', W / 2, H * (spec.ty || 0.42));
-    if (spec.sub) {
-      g.font = `500 ${Math.round((spec.size || 64) * 0.36)}px Instrument Sans, sans-serif`;
-      g.fillStyle = spec.subfg || spec.fg || '#3b2a1f';
-      g.fillText(spec.sub, W / 2, H * (spec.sy || 0.78));
+  return memo(key, () => printed(spec.w || 512, spec.h || 256, (g, W, H) => paintLabel(g, W, H, spec)));
+}
+
+const NOTE_T = [[[4, 1], [5, 1], [6, 2]], [[7, 1.5], [6, 0.5], [5, 1], [4, 1]], [[3, 1], [4, 1], [5, 1], [6, 0.5], [7, 0.5]], [[6, 2], [5, 1], [4, 1]]];
+const NOTE_B = [[[0, 2], [4, 2]], [[1, 2], [5, 2]], [[0, 2], [4, 2]], [[2, 2], [0, 2]]];
+
+function noteHead(g, x, y, dur, stemDown, sp, col) {
+  const rx = sp * 0.62, ry = sp * 0.46;
+  g.fillStyle = col; g.strokeStyle = col;
+  g.beginPath(); g.ellipse(x, y, rx, ry, -0.35, 0, 7);
+  if (dur >= 2) { g.lineWidth = sp * 0.16; g.stroke(); } else g.fill();
+  const sx = stemDown ? x - rx * 0.9 : x + rx * 0.9;
+  const top = stemDown ? y + sp * 3.4 : y - sp * 3.4;
+  g.lineWidth = sp * 0.13;
+  g.beginPath(); g.moveTo(sx, y); g.lineTo(sx, top); g.stroke();
+  if (dur === 0.5) {
+    const dir = stemDown ? 1 : -1;
+    g.lineWidth = sp * 0.16;
+    g.beginPath(); g.moveTo(sx, top); g.quadraticCurveTo(sx + sp * 0.9, top - dir * sp * 0.8, sx + sp * 0.2, top - dir * sp * 1.9); g.stroke();
+  }
+}
+
+function paintSheet(g, W, H) {
+  const k = W / 768, ink = '#2a2118';
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = '#f1e8d0'; g.fillRect(0, 0, W, H);
+  paperGrain(g, W, H, 0.07, 3);
+  g.strokeStyle = ink; g.globalAlpha = 0.5; g.lineWidth = 3 * k; g.strokeRect(W * 0.03, H * 0.03, W * 0.94, H * 0.94); g.globalAlpha = 1;
+  g.fillStyle = ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `600 ${Math.round(60 * k)}px ${SERIF}`; g.fillText('Nocturne', W / 2, H * 0.215);
+  g.font = `italic 500 ${Math.round(26 * k)}px ${SERIF}`; g.fillText('Andante cantabile', W / 2, H * 0.29);
+  g.textAlign = 'left'; g.font = `italic ${Math.round(22 * k)}px ${SERIF}`; g.fillText('dolce', W * 0.14, H * 0.33);
+  g.textAlign = 'center';
+  const sp = H * 0.034, T0 = H * 0.37, B0 = T0 + 8 * sp + H * 0.12;
+  const x0 = W * 0.12, x1 = W * 0.95, xs = x0 + W * 0.1, mw = (x1 - xs) / 4;
+  g.strokeStyle = ink; g.lineWidth = Math.max(1, 1.3 * k);
+  for (const top of [T0, B0]) for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(x0, top + i * sp); g.lineTo(x1, top + i * sp); g.stroke(); }
+  g.lineWidth = 4 * k; g.beginPath(); g.moveTo(x0, T0); g.lineTo(x0, B0 + 4 * sp); g.stroke();
+  g.lineWidth = Math.max(1, 1.6 * k);
+  for (let m = 0; m <= 4; m++) { const x = xs + m * mw; g.beginPath(); g.moveTo(x, T0); g.lineTo(x, T0 + 4 * sp); g.stroke(); g.beginPath(); g.moveTo(x, B0); g.lineTo(x, B0 + 4 * sp); g.stroke(); }
+  g.lineWidth = 6 * k; g.beginPath(); g.moveTo(x1 - 4 * k, T0); g.lineTo(x1 - 4 * k, T0 + 4 * sp); g.moveTo(x1 - 4 * k, B0); g.lineTo(x1 - 4 * k, B0 + 4 * sp); g.stroke();
+  const tG = T0 + 4 * sp - sp;
+  g.lineWidth = 2.6 * sp * 0.3;
+  g.beginPath(); g.moveTo(x0 + sp * 0.3, tG - sp * 2.6); g.bezierCurveTo(x0 - sp * 0.4, tG - sp * 1.6, x0 + sp * 0.2, tG + sp * 0.4, x0 + sp * 1.1, tG + sp * 0.2); g.stroke();
+  g.beginPath(); g.ellipse(x0 + sp * 0.6, tG + sp * 1.5, sp * 0.9, sp * 0.45, 0, 0, 7); g.stroke();
+  g.beginPath(); g.moveTo(x0 + sp * 0.2, tG - sp * 2.8); g.lineTo(x0 + sp * 0.2, tG + sp * 2.4); g.stroke();
+  const bF = B0 + 4 * sp - 3 * sp;
+  g.fillStyle = ink;
+  for (const dy of [-0.5, 0.5]) { g.beginPath(); g.arc(x0 + sp * 1.2, bF + dy * sp, sp * 0.22, 0, 7); g.fill(); }
+  const pitchY = (base, p) => base - p * sp / 2;
+  const bottomT = T0 + 4 * sp, bottomB = B0 + 4 * sp;
+  for (let m = 0; m < 4; m++) {
+    let bx = xs + m * mw + mw * 0.08, bb = bx;
+    for (const [p, d] of NOTE_T[m]) {
+      const nx = bx + (d / 4) * mw * 0.8 * 0.5, ny = pitchY(bottomT, p);
+      noteHead(g, nx, ny, d, p >= 4, sp, ink);
+      bx += (d / 4) * mw * 0.8;
     }
+    bx = bb;
+    for (const [p, d] of NOTE_B[m]) {
+      const nx = bx + (d / 4) * mw * 0.8 * 0.5, ny = pitchY(bottomB, p);
+      noteHead(g, nx, ny, d, p >= 6, sp, ink);
+      bx += (d / 4) * mw * 0.8;
+    }
+  }
+  g.font = `italic ${Math.round(18 * k)}px ${SERIF}`; g.textAlign = 'right';
+  g.fillText('2', W * 0.92, H * 0.94);
+  g.textAlign = 'left'; g.font = `italic ${Math.round(16 * k)}px ${SERIF}`;
+  g.fillText('leggiero', W * 0.14, H * 0.94);
+  wear(g, W, H, 0.16);
+}
+
+export function sheet() {
+  return memo('sheet', () => printed(768, 528, paintSheet));
+}
+
+function paintClockFace(g, W, H) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = '#f6f1e4'; g.fillRect(0, 0, W, H);
+  paperGrain(g, W, H, 0.05, 17);
+  g.fillStyle = '#2b2620'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `600 30px ${SERIF}`;
+  const romans = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6 - Math.PI / 2;
+    g.fillText(romans[i], W / 2 + Math.cos(a) * W * 0.36, H / 2 + Math.sin(a) * H * 0.36);
+  }
+  g.lineWidth = 2;
+  for (let i = 0; i < 60; i++) {
+    const a = i * Math.PI / 30, r0 = W * (i % 5 ? 0.46 : 0.43);
+    g.beginPath(); g.moveTo(W / 2 + Math.cos(a) * r0, H / 2 + Math.sin(a) * r0); g.lineTo(W / 2 + Math.cos(a) * W * 0.47, H / 2 + Math.sin(a) * W * 0.47); g.stroke();
+  }
+  wear(g, W, H, 0.1);
+}
+
+export function clockFace() {
+  return memo('clockface', () => printed(256, 256, paintClockFace));
+}
+
+export function scenePhoto() {
+  return memo('scenephoto', () => {
+    const W = 256, H = 192;
+    const [c, g] = canvas(W, H);
+    const grd = g.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#c9b48f'); grd.addColorStop(0.6, '#e6d3ab'); grd.addColorStop(1, '#a88f68');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    const r = rng(19);
+    g.fillStyle = 'rgba(92,80,60,0.55)';
+    for (let i = 0; i < 6; i++) { const x = r() * W, h = 40 + r() * 50; g.beginPath(); g.moveTo(x - 80, H * 0.7); g.quadraticCurveTo(x, H * 0.7 - h, x + 80, H * 0.7); g.fill(); }
+    g.fillStyle = 'rgba(64,56,40,0.9)';
+    for (let i = 0; i < 9; i++) {
+      const x = r() * W, y = H * 0.72 + r() * 8, h = 28 + r() * 22;
+      g.fillRect(x - 1.5, y - h * 0.3, 3, h * 0.35); g.beginPath(); g.ellipse(x, y - h * 0.5, 9 + r() * 6, h * 0.45, 0, 0, 7); g.fill();
+    }
+    g.fillStyle = 'rgba(60,50,35,0.9)'; g.fillRect(0, H * 0.74, W, H * 0.26);
+    wear(g, W, H, 0.22);
     return tex(c, { clamp: true });
+  });
+}
+
+export function brushed() {
+  return memo('brushed', () => {
+    const W = 256, H = 256;
+    const [c, g] = canvas(W, H);
+    const r = rng(53);
+    const id = g.createImageData(W, H), d = id.data;
+    const row = [];
+    for (let y = 0; y < H; y++) row.push(r());
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = 150 + row[y] * 70 + (r() - 0.5) * 36;
+      const i = (y * W + x) * 4; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+    }
+    g.putImageData(id, 0, 0);
+    const t = tex(c, { data: true });
+    t.repeat.set(2, 6);
+    return t;
   });
 }
 

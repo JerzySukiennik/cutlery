@@ -149,9 +149,7 @@ export function buildPortal(L, o) {
   const status = textSprite(1024, 96, 0.34);
   status.position.set(0, h + 0.66, 0.3);
   root.add(status);
-  const light = new THREE.PointLight(o.light || '#ffd9a8', 0, 15, 1.4);
-  light.position.set(o.roomX ?? o.x, o.y + 5.2, 2.6);
-  L.light(light);
+  const light = { color: new THREE.Color(o.light || '#ffd9a8'), pos: new THREE.Vector3(o.roomX ?? o.x, o.y + 5.2, 2.6), intensity: 0 };
   const p = { id: o.id, ch, tr, x: o.x, y: o.y, w, h, color, kinds, slots, root, arch, uni, title, status, light, lightMax: o.lightMax ?? 9, prog: 0, on: 0, waitT: 0, stat: '', occBefore: 0 };
   return L.portal(p);
 }
@@ -207,6 +205,8 @@ export class Hub {
     this.uid = 'me';
     this.online = false;
     this.fontsReady = false;
+    this.extraLights = world.lightsAdded.filter((l) => l.isPointLight).map((l) => { world.scene.remove(l); return { light: { pos: l.position.clone(), color: l.color.clone(), intensity: l.intensity, d: 0 } }; });
+    this.pool = [0, 1, 2].map(() => { const l = new THREE.PointLight('#ffd9a8', 0, 15, 1.4); world.scene.add(l); world.lightsAdded.push(l); return l; });
     this.lift = { from: 0, to: 0, startW: -99, dur: 0.01, t0: 0, callT: 0, prevDown: false, moving: false };
     if (world.lift) world.lift.mech.drive = () => this.liftY() / world.lift.top;
     document.fonts && document.fonts.ready.then(() => { this.fontsReady = true; for (const p of this.portals) { p.title.userData.key = null; p.status.userData.key = null; } for (const r of this.remotes.values()) r.label.userData.key = null; });
@@ -536,13 +536,14 @@ export class Hub {
       const top = L.roof - 0.5, bot = y + 3.62, len = Math.max(0.05, top - bot);
       L.cable.scale.y = len;
       L.cable.position.y = bot + len / 2;
-      L.light.intensity = 4 + (at < 0 ? 2 : 0);
+
     }
     for (const p of this.portals) {
       p.uni.uTime.value = t;
       p.uni.uOn.value = p.on;
       p.uni.uProg.value = p.prog;
       p.light.intensity = p.lightMax * (0.25 + 0.75 * p.on) * (1 + p.prog * 0.5);
+      p.light.d = Math.hypot(p.light.pos.x - this.w.cam.x, (p.light.pos.y - this.w.cam.y) * 1.6);
       for (const sl of p.slots) {
         sl.glow += ((sl.occ ? 1 : 0) - sl.glow) * Math.min(1, dt * 8);
         sl.mat.emissiveIntensity = (0.12 + p.on * 0.25) + sl.glow * (1.6 + p.prog * 2);
@@ -551,6 +552,15 @@ export class Hub {
       }
       if (this.fontsReady || !document.fonts) this.paintPortal(p);
     }
+    for (const e of this.extraLights) e.light.d = Math.hypot(e.light.pos.x - this.w.cam.x, (e.light.pos.y - this.w.cam.y) * 1.6) - 4;
+    const near = this.portals.concat(this.extraLights).sort((a, b) => a.light.d - b.light.d);
+    this.pool.forEach((l, i) => {
+      const p = near[i];
+      if (!p) { l.intensity = 0; return; }
+      l.position.copy(p.light.pos);
+      l.color.copy(p.light.color);
+      l.intensity = p.light.intensity;
+    });
     if (this.me && this.suck) this.animSuck(this.me, this.suck, dt);
     for (const r of this.remotes.values()) if (r.suck && r.ch.visible) this.animSuck(r.ch, r.suck, dt);
     if (this.me && this.pop) {

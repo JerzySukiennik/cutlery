@@ -1,6 +1,7 @@
 // Characters: Fork, Knife and Butter — models, movement, abilities, combos and network puppets.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { brushed } from './textures.js';
 
 export const KINDS = {
   fork: { name: 'Fork', hw: 0.17, hh: 0.94, speed: 4.8, accel: 44, airAccel: 26, jump: 12.7, grav: 33, fall: 46, weight: 2, strength: 2, len: 1.9, emb: 0.32 },
@@ -17,22 +18,20 @@ const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a
 let metalMat = null, eyeMats = null;
 function sharedMats() {
   if (metalMat) return;
-  metalMat = new THREE.MeshStandardMaterial({ color: '#eef1f4', metalness: 0.84, roughness: 0.16, envMapIntensity: 3.4 });
+  metalMat = new THREE.MeshStandardMaterial({ color: '#d4d9de', metalness: 1, roughness: 0.3, roughnessMap: brushed(), envMapIntensity: 2.8, userData: { noDetail: true } });
   eyeMats = {
-    white: new THREE.MeshStandardMaterial({ color: '#fbfaf6', roughness: 0.32 }),
-    pupil: new THREE.MeshStandardMaterial({ color: '#160f0b', roughness: 0.12, metalness: 0 }),
+    bead: new THREE.MeshStandardMaterial({ color: '#15100c', roughness: 0.06, metalness: 0, envMapIntensity: 1.8 }),
     shine: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
   };
 }
 
 function forkShape() {
   const s = new THREE.Shape();
-  const W = 0.185, tw = 0.06, gw = (2 * W - 4 * tw) / 3, top = 1.9, gapB = 1.56;
+  const W = 0.185, tw = 0.058, gw = (2 * W - 4 * tw) / 3, top = 1.9, gapB = 1.52;
   s.moveTo(0, 0);
-  s.quadraticCurveTo(0.13, 0.0, 0.135, 0.14);
-  s.lineTo(0.12, 0.55);
-  s.quadraticCurveTo(0.072, 0.92, 0.07, 1.12);
-  s.bezierCurveTo(0.07, 1.27, W, 1.3, W, 1.47);
+  s.bezierCurveTo(0.09, 0, 0.135, 0.04, 0.135, 0.14);
+  s.bezierCurveTo(0.135, 0.5, 0.075, 0.85, 0.072, 1.12);
+  s.bezierCurveTo(0.07, 1.25, W, 1.28, W, 1.5);
   s.lineTo(W, top - 0.035);
   let x = W;
   for (let i = 0; i < 4; i++) {
@@ -46,11 +45,10 @@ function forkShape() {
       x = xl - gw;
     }
   }
-  s.lineTo(-W, 1.47);
-  s.bezierCurveTo(-W, 1.3, -0.07, 1.27, -0.07, 1.12);
-  s.quadraticCurveTo(-0.072, 0.92, -0.12, 0.55);
-  s.lineTo(-0.135, 0.14);
-  s.quadraticCurveTo(-0.13, 0, 0, 0);
+  s.lineTo(-W, 1.5);
+  s.bezierCurveTo(-W, 1.28, -0.07, 1.25, -0.072, 1.12);
+  s.bezierCurveTo(-0.075, 0.85, -0.135, 0.5, -0.135, 0.14);
+  s.bezierCurveTo(-0.135, 0.04, -0.09, 0, 0, 0);
   return s;
 }
 
@@ -71,13 +69,15 @@ function knifeGeos() {
   const h = new THREE.Shape();
   h.moveTo(0, 0);
   h.quadraticCurveTo(0.112, 0, 0.112, 0.13);
-  h.lineTo(0.098, 0.8);
-  h.lineTo(0.118, 0.85);
+  h.bezierCurveTo(0.108, 0.4, 0.094, 0.6, 0.096, 0.78);
+  h.lineTo(0.142, 0.84);
+  h.lineTo(0.142, 0.9);
   h.lineTo(0.118, 0.93);
   h.lineTo(-0.118, 0.93);
-  h.lineTo(-0.118, 0.85);
-  h.lineTo(-0.098, 0.8);
-  h.lineTo(-0.112, 0.13);
+  h.lineTo(-0.142, 0.9);
+  h.lineTo(-0.142, 0.84);
+  h.lineTo(-0.096, 0.78);
+  h.bezierCurveTo(-0.094, 0.6, -0.108, 0.4, -0.112, 0.13);
   h.quadraticCurveTo(-0.112, 0, 0, 0);
   const handle = new THREE.ExtrudeGeometry(h, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 3, curveSegments: 10 });
   handle.translate(0, 0, -0.035);
@@ -100,20 +100,40 @@ function makeEyes(size = 1) {
   for (const side of [-1, 1]) {
     const e = new THREE.Group();
     e.position.x = side * 0.085 * size;
-    const w = new THREE.Mesh(new THREE.SphereGeometry(0.068 * size, 18, 12), eyeMats.white);
-    w.scale.set(1, 1.12, 0.55);
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.04 * size, 14, 10), eyeMats.pupil);
-    p.position.z = 0.03 * size;
-    p.scale.set(1, 1.1, 0.5);
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.012 * size, 8, 6), eyeMats.shine);
-    s.position.set(-0.014 * size, 0.018 * size, 0.022 * size);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.046 * size, 16, 12), eyeMats.bead);
+    p.position.z = 0.02 * size;
+    p.scale.set(1, 1.05, 0.72);
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.013 * size, 8, 6), eyeMats.shine);
+    s.position.set(-0.016 * size, 0.018 * size, 0.034 * size);
     p.add(s);
-    e.add(w, p);
+    e.add(p);
     g.add(e);
     eyes.push({ e, p });
   }
   g.userData.eyes = eyes;
   return g;
+}
+
+function butterGeometry() {
+  const geo = new RoundedBoxGeometry(0.9, 0.62, 0.66, 4, 0.06);
+  geo.translate(0, 0.31, 0);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    let dy = 0;
+    if (y > 0.5) {
+      dy += Math.exp(-((x - 0.12) ** 2 + (z - 0.05) ** 2) / 0.012) * 0.014;
+      dy += Math.exp(-((x + 0.22) ** 2 + (z + 0.12) ** 2) / 0.006) * 0.01;
+      dy += Math.exp(-(((z - 0.2) / 0.012) ** 2)) * 0.006;
+    }
+    p.setY(i, y - dy);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function butterMaterial() {
+  return new THREE.MeshPhysicalMaterial({ color: '#f1df9c', roughness: 0.42, sheen: 0.4, sheenRoughness: 0.55, sheenColor: new THREE.Color('#fff4c8'), clearcoat: 0.12, clearcoatRoughness: 0.4, emissive: '#7a5a18', emissiveIntensity: 0.14 });
 }
 
 export function makeFigure(kind, scale = 1) {
@@ -126,9 +146,7 @@ export function makeFigure(kind, scale = 1) {
     for (const geo of knifeGeos()) g.add(new THREE.Mesh(geo, metalMat));
     const e = makeEyes(1.05); e.position.set(0.012, 1.2, 0.03); g.add(e);
   } else {
-    const geo = new RoundedBoxGeometry(0.9, 0.62, 0.66, 4, 0.11);
-    geo.translate(0, 0.31, 0);
-    g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#f7dc7c', roughness: 0.4, emissive: '#5a3c00', emissiveIntensity: 0.22 })));
+    g.add(new THREE.Mesh(butterGeometry(), butterMaterial()));
     const e = makeEyes(1.15); e.position.set(0, 0.38, 0.34); g.add(e);
   }
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -207,11 +225,10 @@ export class Character {
       this.eyes.position.set(0.012, 1.2, 0.03);
       this.body.add(this.eyes);
     } else {
-      const geo = new RoundedBoxGeometry(0.9, 0.62, 0.66, 4, 0.11);
-      geo.translate(0, 0.31, 0);
+      const geo = butterGeometry();
       this.base = geo.attributes.position.array.slice();
       this.butterGeo = geo;
-      this.butterMat = new THREE.MeshStandardMaterial({ color: '#f7dc7c', roughness: 0.4, emissive: '#5a3c00', emissiveIntensity: 0.22 });
+      this.butterMat = butterMaterial();
       const m = new THREE.Mesh(geo, this.butterMat);
       m.castShadow = true;
       m.receiveShadow = true;
@@ -1092,9 +1109,9 @@ export class Character {
     p.needsUpdate = true;
     this.butterGeo.computeVertexNormals();
     const col = this.butterMat.color;
-    if (this.hard) col.set('#fbeec2'); else if (this.melted) col.set('#f6cc4e'); else col.set('#f7dc7c').lerp(new THREE.Color('#f8d25c'), Math.max(0, (tm - 0.45) * 2));
+    if (this.hard) col.set('#f6ebc6'); else if (this.melted) col.set('#f0c451'); else col.set('#f1df9c').lerp(new THREE.Color('#eecb6e'), Math.max(0, (tm - 0.45) * 2));
     this.butterMat.roughness = this.hard ? 0.62 : this.melted ? 0.14 : 0.42 - Math.max(0, tm - 0.5) * 0.4;
-    this.butterMat.emissiveIntensity = this.hard ? 0.08 : 0.22;
+    this.butterMat.emissiveIntensity = this.hard ? 0.06 : 0.14;
     const ey = 0.38 * (1 - sag * 0.15) * (1 - 0.8 * melt);
     this.eyes.position.set(wob * 0.35 * (ey / 0.62), Math.max(0.1, ey), 0.34 * (1 + 0.45 * melt) + 0.01);
     const liquid = (this.melted || this.state === 'seep') && a.melt > 0.55;

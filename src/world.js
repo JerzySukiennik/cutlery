@@ -227,6 +227,7 @@ export class World {
     ch.place(o.x ?? 0, o.y ?? 0, o.face || 1);
     if (kind === 'butter') { ch.temp = this.ambientAt(o.x ?? 0, o.y ?? 0); ch.hard = ch.temp < 0.2; }
     this.chars.push(ch);
+    this.game.renderer.applyDetail(ch.root);
     return ch;
   }
 

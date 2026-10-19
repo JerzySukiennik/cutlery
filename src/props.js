@@ -4,28 +4,31 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import * as T from './textures.js';
 
 const M = {};
+const std = (o) => new THREE.MeshStandardMaterial(o);
 export function mats() {
   if (M.ready) return M;
-  const std = (o) => new THREE.MeshStandardMaterial(o);
-  M.metal = std({ color: '#dfe3e8', metalness: 1, roughness: 0.16 });
-  M.steel = std({ color: '#c9cdd2', metalness: 1, roughness: 0.34 });
-  M.chrome = std({ color: '#eef1f4', metalness: 1, roughness: 0.08 });
-  M.brass = std({ color: '#c8a05a', metalness: 1, roughness: 0.3 });
-  M.copper = std({ color: '#c77b4f', metalness: 1, roughness: 0.28 });
-  M.iron = std({ color: '#2b2a29', metalness: 0.6, roughness: 0.6 });
-  M.dark = std({ color: '#1d1714', roughness: 0.8 });
-  M.glass = new THREE.MeshStandardMaterial({ color: '#e8f2f0', metalness: 0, roughness: 0.04, transparent: true, opacity: 0.22, depthWrite: false, envMapIntensity: 1.6 });
-  M.glassShelf = new THREE.MeshStandardMaterial({ color: '#d6efe9', metalness: 0, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false, envMapIntensity: 1.4 });
-  M.ceramic = std({ color: '#f4f1ea', roughness: 0.22 });
-  M.ceramicBlue = std({ color: '#5c7fa8', roughness: 0.25 });
-  M.ceramicSage = std({ color: '#9fb39a', roughness: 0.3 });
-  M.ceramicCream = std({ color: '#efe1c4', roughness: 0.3 });
-  M.ceramicTerracotta = std({ color: '#c46e4b', roughness: 0.55 });
-  M.plastic = std({ color: '#f2f3f1', roughness: 0.38 });
-  M.plasticDim = std({ color: '#dfe3e2', roughness: 0.45 });
-  M.fridgeLiner = std({ color: '#dfe8ec', roughness: 0.35 });
+  const phys = (o) => new THREE.MeshPhysicalMaterial(o);
+  const glaze = (color, o = {}) => phys({ color, roughness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.1, ...o });
+  M.metal = std({ color: '#dfe3e8', metalness: 1, roughness: 0.18 });
+  M.steel = std({ color: '#c9ced4', metalness: 1, roughness: 0.3, roughnessMap: T.brushed() });
+  M.steel.userData.noDetail = true;
+  M.chrome = std({ color: '#e6eaee', metalness: 1, roughness: 0.09 });
+  M.brass = std({ color: '#c8a05a', metalness: 1, roughness: 0.28 });
+  M.copper = std({ color: '#c77b4f', metalness: 1, roughness: 0.26 });
+  M.iron = std({ color: '#2d2c2b', metalness: 0.35, roughness: 0.62 });
+  M.dark = std({ color: '#1d1714', roughness: 0.6 });
+  M.glass = std({ color: '#e6f3f0', metalness: 0, roughness: 0.03, transparent: true, opacity: 0.2, depthWrite: false, envMapIntensity: 3.2, side: THREE.DoubleSide });
+  M.glassShelf = std({ color: '#d6efe9', metalness: 0, roughness: 0.04, transparent: true, opacity: 0.35, depthWrite: false, envMapIntensity: 2.8 });
+  M.ceramic = glaze('#f4f1ea');
+  M.ceramicBlue = glaze('#4f74a0');
+  M.ceramicSage = glaze('#97ad92');
+  M.ceramicCream = glaze('#efe3cb');
+  M.ceramicTerracotta = phys({ color: '#b9643f', roughness: 0.75 });
+  M.plastic = std({ color: '#f2f3f1', roughness: 0.4 });
+  M.plasticDim = std({ color: '#dfe3e2', roughness: 0.5 });
+  M.fridgeLiner = std({ color: '#dfe8ec', roughness: 0.4 });
   const tl = T.tiles('#ece3d3', '#bdb19e');
-  M.tiles = std({ map: tl.map, bumpMap: tl.bump, bumpScale: 1.4, roughness: 0.28 });
+  M.tiles = std({ map: tl.map, bumpMap: tl.bump, bumpScale: 1.4, roughness: 0.22 });
   M.paint = std({ map: T.wallPaint('#efe2cc'), roughness: 0.9 });
   M.paintDark = std({ map: T.wallPaint('#d7c6ab'), roughness: 0.9 });
   M.stone = std({ map: T.stone(), roughness: 0.32 });
@@ -33,28 +36,28 @@ export function mats() {
   M.woodDark = std({ map: T.wood('#9a6a43', '#5c3a22', 8), roughness: 0.6 });
   M.woodDrawer = std({ map: T.wood('#d8b384', '#a87a4e', 12, 0), roughness: 0.65 });
   M.woodTable = std({ map: T.wood('#b9875a', '#7a4f2e', 17, 6), roughness: 0.5 });
-  M.cabinet = std({ color: '#8ea08a', roughness: 0.55 });
-  M.cabinetDark = std({ color: '#71846d', roughness: 0.6 });
+  M.cabinet = std({ color: '#8ea08a', roughness: 0.5 });
+  M.cabinetDark = std({ color: '#71846d', roughness: 0.55 });
   M.crust = std({ map: T.crust(), roughness: 0.75 });
   M.crumb = std({ map: T.crumb(), roughness: 0.9 });
   M.cheese = std({ map: T.cheese(), roughness: 0.5 });
   M.cheeseRind = std({ color: '#e7b43c', roughness: 0.45 });
-  M.jam = std({ color: '#8f1f2e', roughness: 0.15, transparent: true, opacity: 0.92 });
-  M.honey = std({ color: '#d88d1d', roughness: 0.1, transparent: true, opacity: 0.9 });
+  M.jam = std({ color: '#8f1f2e', roughness: 0.12, transparent: true, opacity: 0.92 });
+  M.honey = std({ color: '#d88d1d', roughness: 0.08, transparent: true, opacity: 0.9 });
   M.pickle = std({ color: '#7d8c3a', roughness: 0.3 });
   M.milk = std({ color: '#fbfaf6', roughness: 0.3 });
-  M.foil = std({ color: '#d8d8dc', metalness: 0.9, roughness: 0.35 });
-  M.lidRed = std({ color: '#b5443a', roughness: 0.4 });
-  M.lidGold = std({ color: '#c79c48', metalness: 0.8, roughness: 0.35 });
-  M.lidGreen = std({ color: '#5f7d4c', roughness: 0.45 });
+  M.foil = std({ color: '#d8d8dc', metalness: 0.9, roughness: 0.3 });
+  M.lidRed = std({ color: '#b5443a', roughness: 0.42 });
+  M.lidGold = std({ color: '#c79c48', metalness: 0.9, roughness: 0.28 });
+  M.lidGreen = std({ color: '#5f7d4c', roughness: 0.42 });
   M.sponge = std({ color: '#f2d24b', roughness: 0.95 });
   M.spongeGreen = std({ color: '#4d8a52', roughness: 0.95 });
-  M.cloth = std({ map: T.cloth(), roughness: 0.95, side: THREE.DoubleSide });
-  M.towel = std({ map: T.cloth('#efe9df', '#c9a26a'), roughness: 0.95, side: THREE.DoubleSide });
-  M.leaf = std({ color: '#5e8a45', roughness: 0.7, side: THREE.DoubleSide });
-  M.lemon = std({ color: '#f1cf3b', roughness: 0.45 });
-  M.orange = std({ color: '#ea8a2c', roughness: 0.5 });
-  M.apple = std({ color: '#b8402f', roughness: 0.3 });
+  M.cloth = phys({ map: T.cloth(), roughness: 0.92, sheen: 0.5, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff'), side: THREE.DoubleSide });
+  M.towel = phys({ map: T.cloth('#efe9df', '#c9a26a'), roughness: 0.92, sheen: 0.5, sheenRoughness: 0.6, sheenColor: new THREE.Color('#fff8ec'), side: THREE.DoubleSide });
+  M.leaf = std({ color: '#5e8a45', roughness: 0.6, side: THREE.DoubleSide });
+  M.lemon = std({ color: '#f1cf3b', roughness: 0.4 });
+  M.orange = std({ color: '#ea8a2c', roughness: 0.45 });
+  M.apple = std({ color: '#b8402f', roughness: 0.28 });
   M.pea = std({ color: '#7db443', roughness: 0.35 });
   M.grape = std({ color: '#6b3a5e', roughness: 0.2 });
   M.cork = std({ color: '#b98d5b', roughness: 0.9 });
@@ -72,6 +75,7 @@ export function mats() {
   for (const k of ['metal', 'steel', 'chrome', 'brass', 'copper']) M[k].envMapIntensity = 2.6;
   M.glass.envMapIntensity = 3.2; M.glassShelf.envMapIntensity = 2.8; M.ice.envMapIntensity = 3;
   for (const k of ['tiles', 'paint', 'paintDark', 'stone', 'woodBoard', 'woodDark', 'woodDrawer', 'woodTable', 'crust', 'crumb', 'cheese', 'cloth', 'towel']) M[k].userData.worldUV = k === 'tiles' ? 4 : (k.startsWith('wood') ? 9 : 7);
+  M.stone.userData.bumpK = 0.35;
   M.ready = true;
   return M;
 }
@@ -101,13 +105,60 @@ function lathe(pts, segs = 28) {
   return new THREE.LatheGeometry(pts.map((p) => new THREE.Vector2(p[0], p[1])), segs);
 }
 
-function labelBand(r, h, spec, y) {
-  const geo = new THREE.CylinderGeometry(r * 1.004, r * 1.004, h, 32, 1, true);
-  const m = new THREE.MeshStandardMaterial({ map: T.label(spec), roughness: 0.6 });
+function tube(points, radius, segs = 40) {
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(p[0], p[1], p[2] || 0))), segs, radius, 12, false);
+}
+
+export function turnedLeg(h, r = 0.3) {
+  return g(`tl${h.toFixed(3)}|${r.toFixed(3)}`, () => lathe([
+    [0, 0], [r * 1.25, 0], [r * 1.25, 0.14], [r * 0.9, 0.22], [r * 0.6, 0.32], [r * 0.85, 0.5], [r * 0.85, 0.58], [r * 0.6, 0.66],
+    [r * 0.7, h * 0.4], [r * 0.7, h - 0.5], [r * 0.95, h - 0.42], [r * 0.75, h - 0.28], [r * 0.82, h - 0.2], [r * 0.9, h - 0.08], [r * 0.9, h], [0, h],
+  ], 24));
+}
+
+function knurledLid(rl, hl) {
+  return g(`kn${rl.toFixed(3)}|${hl.toFixed(3)}`, () => {
+    const geo = new THREE.CylinderGeometry(rl, rl, hl, 64, 1);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), rr = Math.hypot(x, z);
+      if (rr > rl * 0.98) { const s = 1 + 0.025 * Math.sin(Math.atan2(x, z) * 48); p.setX(i, x * s); p.setZ(i, z * s); }
+    }
+    geo.computeVertexNormals();
+    return geo;
+  });
+}
+
+function labelArc(r, h, spec, y, arc = 2.3) {
+  const H = Math.max(128, Math.min(512, Math.round(512 * h / (arc * r))));
+  const geo = g(`la${r.toFixed(3)}|${h.toFixed(3)}|${arc}`, () => new THREE.CylinderGeometry(r * 1.02, r * 1.02, h, 40, 1, true, -arc / 2, arc));
+  const m = new THREE.MeshStandardMaterial({ map: T.label({ ...spec, w: 512, h: H }), roughness: 0.5 });
+  return mesh(geo, m, 0, y, 0, { cast: false });
+}
+
+export function labelWrap(r, h, spec, y) {
+  const H = Math.max(128, Math.min(512, Math.round(512 * h / (2 * Math.PI * r))));
+  const geo = g(`lw${r.toFixed(3)}|${h.toFixed(3)}`, () => new THREE.CylinderGeometry(r * 1.01, r * 1.01, h, 48, 1, true));
+  const m = new THREE.MeshStandardMaterial({ map: T.label({ ...spec, w: 512, h: H }), roughness: 0.5 });
   const me = mesh(geo, m, 0, y, 0, { cast: false });
-  me.rotation.y = -Math.PI / 2;
+  me.rotation.y = Math.PI;
   return me;
 }
+
+function faceSpec(spec, w, h) {
+  return { ...spec, w: Math.max(128, Math.min(512, Math.round(512 * w / h))), h: 512 };
+}
+
+const JAR = {
+  Jam: { text: 'Jam', kicker: 'HOMEMADE', sub: 'cherry', italic: true, bg: '#f6eedb', fg: '#6b2a20', band: '#8f1f2e', bandY: 0.7, subfg: '#f6eedb', ty: 0.36, sy: 0.6, size: 110, subSize: 42, fine: 'NET WT 340 G', fy: 0.84, emblem: 'star', ey: 0.2, eR: 0.06, emblemCol: '#8f1f2e' },
+  Honey: { text: 'Honey', kicker: 'WILDFLOWER', sub: 'raw · 350 g', italic: true, bg: '#f7e7b6', fg: '#6b4212', band: '#d88d1d', bandY: 0.7, subfg: '#fff4d6', ty: 0.36, sy: 0.6, size: 110, subSize: 40, fine: 'KEEP DRY', fy: 0.84, emblem: 'sun', ey: 0.2, eR: 0.06, emblemCol: '#d88d1d' },
+  Pickles: { text: 'Pickles', kicker: 'GARDEN', sub: 'dill · 500 g', bg: '#e9e6c7', fg: '#3d4a1c', band: '#7d8c3a', bandY: 0.7, subfg: '#eef0d5', ty: 0.36, sy: 0.6, size: 100, subSize: 40, fine: 'NET WT 500 G', fy: 0.84, emblem: 'leaf', ey: 0.2, eR: 0.06, emblemCol: '#7d8c3a' },
+};
+
+const BOTTLE = {
+  honey: { text: 'Honey', kicker: 'PURE', sub: 'linden', italic: true, bg: '#f5e4b0', fg: '#6b4212', band: '#d88d1d', bandY: 0.72, subfg: '#fff4d6', ty: 0.38, sy: 0.6, size: 110, subSize: 40, emblem: 'sun', ey: 0.2, eR: 0.06, emblemCol: '#d88d1d' },
+  pickle: { text: 'Vinegar', kicker: 'CIDER', sub: 'apple · 500 ml', bg: '#ece8d2', fg: '#3d4a1c', band: '#7d8c3a', bandY: 0.72, subfg: '#eef0d5', ty: 0.38, sy: 0.6, size: 100, subSize: 40, emblem: 'leaf', ey: 0.2, eR: 0.06, emblemCol: '#7d8c3a' },
+};
 
 export class Builder {
   constructor(scene) {
@@ -283,12 +334,12 @@ export class Builder {
   jar(x, y, w, h, fill = 'jam', lid = 'lidRed') {
     const m = this.m, r = w / 2;
     const gr = this.group(x + r, y, 0, false);
-    const shape = [[0, 0], [r * 0.9, 0], [r, 0.08], [r, h * 0.82], [r * 0.82, h * 0.9], [r * 0.82, h * 0.93], [0, h * 0.93]];
-    gr.add(mesh(lathe(shape, 28), m.glass, 0, 0, 0, { cast: false }));
+    gr.add(mesh(lathe([[0, 0.02], [r * 0.9, 0], [r * 0.99, 0.08], [r, 0.2], [r, h * 0.8], [r * 0.9, h * 0.88], [r * 0.82, h * 0.92], [r * 0.82, h * 0.93], [0, h * 0.93]], 36), m.glass, 0, 0, 0, { cast: false }));
     const fm = fill === 'honey' ? m.honey : fill === 'pickle' ? m.pickle : m.jam;
-    gr.add(mesh(new THREE.CylinderGeometry(r * 0.92, r * 0.92, h * 0.72, 24), fm, 0, h * 0.37, 0));
-    gr.add(mesh(new THREE.CylinderGeometry(r * 0.88, r * 0.88, h * 0.11, 24), m[lid], 0, h * 0.96, 0));
-    gr.add(labelBand(r * 1.0, h * 0.34, { text: fill === 'honey' ? 'Honey' : fill === 'pickle' ? 'Pickles' : 'Jam', sub: fill === 'jam' ? 'cherry · Gzowo' : 'homemade', bg: '#f4ecd9', fg: '#5a2c22', italic: true, size: 70 }, h * 0.45));
+    gr.add(mesh(lathe([[0, 0.1], [r * 0.86, 0.1], [r * 0.88, h * 0.2], [r * 0.88, h * 0.76], [r * 0.8, h * 0.8], [0, h * 0.82]], 32), fm, 0, 0, 0));
+    gr.add(mesh(knurledLid(r * 0.9, h * 0.1), m[lid], 0, h * 0.9, 0));
+    const spec = JAR[fill === 'honey' ? 'Honey' : fill === 'pickle' ? 'Pickles' : 'Jam'];
+    gr.add(labelArc(r, h * 0.38, spec, h * 0.44, 2.4));
     this.col(x, y, w, h * 1.0, 'glass');
     return gr;
   }
@@ -296,36 +347,34 @@ export class Builder {
   mug(x, y, r, h, mat = 'ceramicBlue', z = 0, collide = true) {
     const m = this.m;
     const gr = this.group(x + r, y, z, false);
-    gr.add(mesh(lathe([[0, 0.02], [r * 0.85, 0], [r, 0.08], [r * 1.02, h], [r * 0.92, h], [r * 0.9, h * 0.12], [0, h * 0.12]], 28), m[mat]));
-    const hd = mesh(new THREE.TorusGeometry(h * 0.26, r * 0.12, 8, 16, Math.PI * 1.2), m[mat], r * 0.98, h * 0.5, 0);
-    hd.rotation.z = -Math.PI * 0.6;
-    gr.add(hd);
+    gr.add(mesh(lathe([[0, 0.02], [r * 0.82, 0], [r * 0.95, 0.06], [r * 1.0, 0.14], [r * 1.0, h * 0.96], [r * 1.03, h], [r * 0.93, h], [r * 0.92, h * 0.14], [0, h * 0.12]], 32), m[mat]));
+    const hw = r * 0.62;
+    gr.add(mesh(tube([[r * 0.96, h * 0.84, 0], [r + hw * 0.7, h * 0.86, 0], [r + hw, h * 0.7, 0], [r + hw, h * 0.32, 0], [r + hw * 0.7, h * 0.16, 0], [r * 0.96, h * 0.2, 0]], r * 0.14), m[mat], 0, 0, 0));
     if (collide) this.col(x, y, r * 2, h, 'ceramic');
     return gr;
   }
 
   coffeeMug(x, y, r, h, z = 0, collide = true) {
     const gr = this.mug(x, y, r, h, 'ceramicCream', z, collide);
-    gr.add(mesh(new THREE.CylinderGeometry(r * 0.88, r * 0.88, 0.05, 24), this.m.coffee, 0, h * 0.86, 0, { cast: false }));
+    gr.add(mesh(new THREE.CylinderGeometry(r * 0.9, r * 0.9, 0.05, 28), this.m.coffee, 0, h * 0.86, 0, { cast: false }));
     return gr;
   }
 
   yogurt(x, y, w, h, color = '#e9b8c4') {
     const m = this.m, r = w / 2;
     const gr = this.group(x + r, y, 0, false);
-    const mat = new THREE.MeshStandardMaterial({ map: T.label({ text: 'Yogurt', sub: 'strawberry', bg: color, fg: '#ffffff', italic: true, size: 80 }), roughness: 0.4 });
-    const cup = mesh(new THREE.CylinderGeometry(r, r * 0.78, h, 28, 1, false), mat, 0, h / 2, 0);
-    cup.rotation.y = -Math.PI / 2;
+    const cup = mesh(new THREE.CylinderGeometry(r, r * 0.9, h, 32, 1, true), std({ color: '#fbf8f2', roughness: 0.35, side: THREE.DoubleSide }), 0, h / 2, 0);
     gr.add(cup);
+    gr.add(labelArc(r * 0.97, h * 0.62, { text: 'Yogurt', kicker: 'FARM', sub: 'strawberry', bg: color, fg: '#ffffff', italic: true, size: 96, subSize: 34, frame: false, ty: 0.4, sy: 0.7 }, h * 0.5, 2.6));
     gr.add(mesh(new THREE.CylinderGeometry(r * 1.06, r * 1.06, 0.05, 28), m.foil, 0, h + 0.02, 0));
     this.col(x + 0.05, y, w - 0.1, h + 0.05, 'plastic');
     return gr;
   }
 
-  carton(x, y, w, h, spec = { text: 'Milk', sub: 'fresh · 1 L', bg: '#fbfaf5', fg: '#3c6aa1', band: '#a9c6e6' }) {
+  carton(x, y, w, h, spec = { text: 'Milk', kicker: 'FRESH', sub: 'whole · 1 L', bg: '#fbfaf5', fg: '#2f5d91', band: '#a9c6e6', bandY: 0.72, emblem: 'sun', ey: 0.22, eR: 0.08, emblemCol: '#f0b43c', ty: 0.36, sy: 0.6, size: 96, subSize: 34 }) {
     const gr = this.group(x + w / 2, y, 0, false);
-    const lm = new THREE.MeshStandardMaterial({ map: T.label({ ...spec, w: 256, h: 512, size: 70, ty: 0.3, sy: 0.42 }), roughness: 0.5 });
-    const side = new THREE.MeshStandardMaterial({ color: spec.bg, roughness: 0.5 });
+    const lm = new THREE.MeshStandardMaterial({ map: T.label(faceSpec(spec, w, h)), roughness: 0.5 });
+    const side = new THREE.MeshStandardMaterial({ color: spec.band || spec.bg, roughness: 0.5 });
     gr.add(mesh(bx(w, h, w * 0.95), [side, side, side, side, lm, side], 0, h / 2, 0));
     const roof = new THREE.Shape();
     roof.moveTo(-w / 2, 0); roof.lineTo(0, w * 0.32); roof.lineTo(w / 2, 0); roof.closePath();
@@ -378,12 +427,17 @@ export class Builder {
   toaster(x, y, w = 3.2, h = 2.4) {
     const m = this.m;
     const gr = this.group(x + w / 2, y, 0, false);
-    gr.add(mesh(rbox(w, h, 2.0, 0.45, 4), m.chrome, 0, h / 2, 0));
-    gr.add(mesh(rbox(w * 0.98, 0.3, 2.04, 0.12), m.dark, 0, 0.15, 0));
-    for (const sx of [-0.45, 0.45]) gr.add(mesh(bx(w * 0.7, 0.05, 0.3), m.dark, 0, h + 0.005, sx, { cast: false }));
-    const lever = mesh(rbox(0.5, 0.28, 0.35, 0.08), m.dark, w / 2 + 0.1, h * 0.75, 0.4);
-    gr.add(lever);
+    gr.add(mesh(rbox(w, h, 2.0, 0.42, 4), m.chrome, 0, h / 2, 0));
+    gr.add(mesh(rbox(w * 1.01, 0.3, 2.04, 0.12), m.dark, 0, 0.15, 0));
+    for (const sx of [-0.5, 0.5]) gr.add(mesh(rbox(w * 0.66, 0.06, 0.34, 0.03), m.dark, 0, h + 0.02, sx, { cast: false }));
+    for (const sx of [-w / 2 + 0.25, w / 2 - 0.25]) gr.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 12), m.dark, sx, 0.4, 1.04, { rx: Math.PI / 2 }));
     gr.add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 16), m.dark, -w * 0.3, h * 0.35, 1.02, { rx: Math.PI / 2 }));
+    gr.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 12), m.chrome, -w * 0.3, h * 0.35, 1.08, { rx: Math.PI / 2 }));
+    const lever = new THREE.Group();
+    lever.position.set(w / 2 + 0.1, h * 0.75, 0.4);
+    lever.add(mesh(rbox(0.5, 0.28, 0.35, 0.08), m.dark, 0, 0, 0));
+    lever.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.5, 10), m.chrome, 0, -0.3, 0));
+    gr.add(lever);
     this.col(x, y, w, h - 0.05, 'metal');
     return { gr, lever };
   }
@@ -391,28 +445,28 @@ export class Builder {
   kettle(x, y, r = 1.1, z = -1.2) {
     const m = this.m;
     const gr = this.group(x + r, y, z, false);
-    gr.add(mesh(lathe([[0, 0], [r * 0.95, 0], [r, 0.2], [r * 0.95, r * 1.2], [r * 0.6, r * 1.55], [r * 0.3, r * 1.62], [0, r * 1.62]], 28), m.steel));
-    const h = mesh(new THREE.TorusGeometry(r * 0.6, 0.1, 8, 20, Math.PI), m.dark, 0, r * 1.62, 0);
-    gr.add(h);
-    const sp = mesh(new THREE.CylinderGeometry(0.1, 0.22, r * 1.1, 10), m.steel, r * 1.05, r * 0.9, 0, { rz: -0.9 });
-    gr.add(sp);
+    gr.add(mesh(lathe([[0, 0], [r * 0.85, 0], [r * 0.97, 0.08], [r, 0.25], [r * 1.0, r * 1.0], [r * 0.92, r * 1.3], [r * 0.6, r * 1.5], [r * 0.28, r * 1.58], [0, r * 1.6]], 36), m.steel));
+    gr.add(mesh(tube([[-r * 0.66, r * 1.42, 0], [-r * 0.82, r * 1.84, 0], [-r * 0.3, r * 2.15, 0], [r * 0.3, r * 2.15, 0], [r * 0.82, r * 1.84, 0], [r * 0.66, r * 1.42, 0]], r * 0.085), m.dark));
+    gr.add(mesh(tube([[r * 0.9, r * 0.4, 0], [r * 1.3, r * 0.5, 0], [r * 1.55, r * 0.92, 0], [r * 1.62, r * 1.24, 0]], r * 0.1), m.steel));
+    gr.add(mesh(new THREE.SphereGeometry(r * 0.12, 14, 10), m.dark, 0, r * 1.64, 0));
+    gr.add(mesh(new THREE.CylinderGeometry(r * 0.7, r * 0.8, 0.12, 28), m.dark, 0, 0.05, 0));
     return gr;
   }
 
   canister(x, y, r, h, text = 'Flour', z = 0, collide = true) {
     const m = this.m;
     const gr = this.group(x + r, y, z, false);
-    gr.add(mesh(new THREE.CylinderGeometry(r, r, h, 32), m.ceramicCream, 0, h / 2, 0));
-    gr.add(mesh(new THREE.CylinderGeometry(r * 1.03, r * 1.03, 0.4, 32), m.woodBoard, 0, h + 0.2, 0));
-    gr.add(mesh(new THREE.SphereGeometry(0.2, 12, 8), m.woodDark, 0, h + 0.45, 0));
-    gr.add(labelBand(r, h * 0.3, { text, bg: '#efe1c4', fg: '#6b5236', size: 84, italic: true }, h * 0.55));
+    gr.add(mesh(lathe([[0, 0], [r * 0.96, 0], [r, 0.1], [r, h * 0.96], [r * 0.98, h], [0, h]], 36), m.ceramicCream));
+    gr.add(mesh(lathe([[0, h], [r * 0.98, h], [r * 1.05, h + 0.12], [r * 1.05, h + 0.3], [0, h + 0.3]], 36), m.steel));
+    gr.add(mesh(new THREE.SphereGeometry(0.18, 14, 10), m.woodDark, 0, h + 0.5, 0));
+    gr.add(labelArc(r, h * 0.36, { text, kicker: 'PANTRY', bg: '#efe1c4', fg: '#6b5236', size: 96, italic: true, sub: '500 g', subSize: 34, ty: 0.42, sy: 0.7, fine: 'KEEP DRY', fy: 0.85 }, h * 0.5, 2.4));
     if (collide) this.col(x, y, r * 2, h + 0.4, 'ceramic');
     return gr;
   }
 
   cereal(x, y, w, h, z = 0, collide = true) {
     const gr = this.group(x + w / 2, y, z, false);
-    const front = new THREE.MeshStandardMaterial({ map: T.label({ text: 'Morning O’s', sub: 'whole grain · honey', bg: '#e8b04a', fg: '#4a2c14', band: '#c85d3a', size: 46, w: 256, h: 512, ty: 0.25, sy: 0.33 }), roughness: 0.6 });
+    const front = new THREE.MeshStandardMaterial({ map: T.label(faceSpec({ text: 'Morning O’s', kicker: 'WHOLE GRAIN', sub: 'honey · family size', bg: '#e8b04a', fg: '#4a2c14', band: '#c85d3a', bandY: 0.78, size: 92, subSize: 34, ty: 0.3, sy: 0.46, italic: true, emblem: 'sun', ey: 0.56, eR: 0.09, emblemCol: '#fff1c4' }, w, h)), roughness: 0.6 });
     const side = new THREE.MeshStandardMaterial({ color: '#d99b3c', roughness: 0.6 });
     gr.add(mesh(bx(w, h, 1.2), [side, side, side, side, front, side], 0, h / 2, 0));
     if (collide) this.col(x, y, w, h, 'plastic');
@@ -427,9 +481,9 @@ export class Builder {
     for (let i = 0; i < n; i++) {
       if (i % 3 === 1) continue;
       const cx = x + 0.45 + i * 0.9;
-      this.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 16), m.glass, cx, y + 0.45, z - 1.0, { cast: false }));
-      this.add(mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.7, 16), [m.pickle, m.orange, m.toast, m.lidRed][i % 4], cx, y + 0.36, z - 1.0));
-      this.add(mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.2, 16), m[caps[i % 4]], cx, y + 1.0, z - 1.0));
+      this.add(mesh(lathe([[0, 0], [0.26, 0], [0.3, 0.1], [0.3, 0.8], [0.27, 0.9], [0, 0.9]], 18), m.glass, cx, y, z - 1.0, { cast: false }));
+      this.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.6, 16), [m.pickle, m.orange, m.toast, m.lidRed][i % 4], cx, y + 0.34, z - 1.0));
+      this.add(mesh(knurledLid(0.3, 0.2), m[caps[i % 4]], cx, y + 0.98, z - 1.0));
     }
     if (collide) this.col(x, y - 0.25, w, 0.25, 'wood', { oneWay: true });
   }
@@ -454,18 +508,17 @@ export class Builder {
   sink(x, y, w, depth = 3.2) {
     const m = this.m;
     const gr = this.group(x, y, 0, false);
-    gr.add(mesh(bx(w, depth, 0.2), m.steel, w / 2, -depth / 2, -2.6, { cast: false }));
-    gr.add(mesh(bx(w, 0.2, 4.4), m.steel, w / 2, -depth, -0.4, { cast: false }));
-    gr.add(mesh(bx(0.15, depth, 4.4), m.steel, 0.07, -depth / 2, -0.4));
-    gr.add(mesh(bx(0.15, depth, 4.4), m.steel, w - 0.07, -depth / 2, -0.4));
+    gr.add(mesh(rbox(w, depth, 0.2, 0.06), m.steel, w / 2, -depth / 2, -2.6, { cast: false }));
+    gr.add(mesh(rbox(w, 0.2, 4.4, 0.06), m.steel, w / 2, -depth, -0.4, { cast: false }));
+    gr.add(mesh(rbox(0.15, depth, 4.4, 0.04), m.steel, 0.07, -depth / 2, -0.4));
+    gr.add(mesh(rbox(0.15, depth, 4.4, 0.04), m.steel, w - 0.07, -depth / 2, -0.4));
     gr.add(mesh(rbox(w + 0.3, 0.12, 0.3, 0.04), m.steel, w / 2, -0.06, 1.75));
     const water = mesh(bx(w - 0.3, 0.1, 4.2), m.water, w / 2, -depth + 0.9, -0.4, { cast: false });
     gr.add(water);
     const f = this.group(x + w * 0.5, y, -2.8, false);
-    f.add(mesh(new THREE.CylinderGeometry(0.2, 0.26, 4.4, 14), m.chrome, 0, 2.2, 0));
-    const neck = mesh(new THREE.TorusGeometry(1.0, 0.16, 10, 20, Math.PI), m.chrome, 1.0, 4.4, 0);
-    f.add(neck);
-    f.add(mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.5, 12), m.chrome, 2.0, 4.15, 0));
+    f.add(mesh(lathe([[0, 0], [0.26, 0], [0.26, 0.2], [0.2, 0.5], [0.2, 3.9], [0.24, 4.2], [0.2, 4.4], [0, 4.4]], 16), m.chrome));
+    f.add(mesh(tube([[0, 4.25, 0], [0.7, 4.7, 0], [1.6, 4.65, 0], [2.0, 4.2, 0]], 0.19, 28), m.chrome));
+    f.add(mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.1, 16), m.chrome, 0, 0.05, 0));
     this.col(x - 0.01, y - depth - 1, 0.16, depth + 1, 'metal');
     this.col(x + w - 0.15, y - depth - 1, 0.16, depth + 1, 'metal');
     this.col(x, y - depth - 1, w, 1, 'metal');
@@ -474,19 +527,19 @@ export class Builder {
 
   stove(x, y, w, burners = 2) {
     const m = this.m;
-    this.add(mesh(rbox(w, 0.25, 5.2, 0.05), m.iron, x + w / 2, y - 0.12, -0.9));
+    this.add(mesh(rbox(w, 0.22, 5.2, 0.05), m.steel, x + w / 2, y - 0.12, -0.9));
     const glows = [];
     for (let i = 0; i < burners; i++) {
       const cx = x + w * (i + 0.5) / burners;
-      this.add(mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.18, 24), m.iron, cx, y + 0.09, 0));
+      this.add(mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.18, 28), m.iron, cx, y + 0.09, 0));
       const ring = mesh(new THREE.TorusGeometry(0.62, 0.06, 6, 32), new THREE.MeshBasicMaterial({ color: '#3a3330' }), cx, y + 0.2, 0, { rx: Math.PI / 2, cast: false });
       this.add(ring, true);
       glows.push(ring);
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        this.add(mesh(bx(1.5, 0.12, 0.12), m.iron, cx + Math.cos(a) * 0.75, y + 0.26, Math.sin(a) * 0.75, { ry: -a }));
+        this.add(mesh(rbox(1.5, 0.14, 0.14, 0.06), m.iron, cx + Math.cos(a) * 0.75, y + 0.26, Math.sin(a) * 0.75, { ry: -a }));
       }
-      this.add(mesh(bx(2.2, 0.12, 0.12), m.iron, cx, y + 0.3, 0));
+      this.add(mesh(rbox(2.2, 0.14, 0.14, 0.06), m.iron, cx, y + 0.3, 0));
     }
     this.col(x, y - 3, w, 3, 'metal');
     this.col(x + 0.2, y, w - 0.4, 0.3, 'grate', { grate: true, seep: false });
@@ -525,14 +578,13 @@ export class Builder {
     this.add(cl);
     const drape = mesh(new THREE.PlaneGeometry(w * 0.86, 2.6), m.cloth, x + w / 2, y - 1.3, 2.75, { cast: false });
     this.add(drape);
-    if (opts.legs !== false) for (const lx of [x + 0.8, x + w - 0.8]) this.add(mesh(bx(0.6, opts.legH || 9, 0.6), m.woodTable, lx, y - 0.45 - (opts.legH || 9) / 2, 1.6));
+    if (opts.legs !== false) for (const lx of [x + 0.8, x + w - 0.8]) this.add(mesh(turnedLeg(opts.legH || 9, 0.3), m.woodTable, lx, y - 0.45 - (opts.legH || 9), 1.6));
     this.col(x, y - 0.45, w, 0.47, 'cloth');
   }
 
-
   plate(x, y, r = 1.6, z = 0, collide = true) {
     const gr = this.group(x + r, y, z, false);
-    gr.add(mesh(lathe([[0, 0], [r * 0.6, 0], [r * 0.65, 0.08], [r, 0.22], [r * 0.98, 0.26], [r * 0.6, 0.12], [0, 0.12]], 40), this.m.ceramic));
+    gr.add(mesh(lathe([[0, 0], [r * 0.5, 0], [r * 0.56, 0.05], [r * 0.6, 0.08], [r * 0.9, 0.16], [r, 0.24], [r * 0.99, 0.27], [r * 0.95, 0.26], [r * 0.6, 0.14], [0, 0.14]], 44), this.m.ceramic));
     if (collide) this.col(x + r * 0.1, y, r * 1.8, 0.22, 'ceramic');
     return gr;
   }
@@ -576,7 +628,7 @@ export class Builder {
   plant(x, y, z = -2.4, s = 1) {
     const m = this.m;
     const gr = this.group(x, y, z, false);
-    gr.add(mesh(lathe([[0, 0], [0.7 * s, 0], [0.9 * s, 1.3 * s], [0.95 * s, 1.35 * s], [0, 1.35 * s]], 20), m.ceramicTerracotta));
+    gr.add(mesh(lathe([[0, 0], [0.62 * s, 0], [0.8 * s, 0.4 * s], [0.9 * s, 1.0 * s], [0.95 * s, 1.3 * s], [0.9 * s, 1.36 * s], [0, 1.36 * s]], 24), m.ceramicTerracotta));
     const lf = new THREE.SphereGeometry(0.45 * s, 10, 6);
     for (let i = 0; i < 14; i++) {
       const a = i * 2.4, rr = 0.2 + (i % 5) * 0.12;
@@ -588,7 +640,7 @@ export class Builder {
   utensilCrock(x, y, z = -2.6) {
     const m = this.m;
     const gr = this.group(x, y, z, false);
-    gr.add(mesh(new THREE.CylinderGeometry(0.85, 0.8, 2.2, 24), m.ceramicSage, 0, 1.1, 0));
+    gr.add(mesh(lathe([[0, 0], [0.7, 0], [0.85, 0.3], [0.86, 2.0], [0.82, 2.2], [0, 2.2]], 24), m.ceramicSage));
     for (let i = 0; i < 4; i++) {
       const sp = new THREE.Group();
       sp.add(mesh(new THREE.CylinderGeometry(0.07, 0.09, 3.6, 8), m.woodBoard, 0, 1.8, 0));
@@ -623,8 +675,9 @@ export class Builder {
   clock(x, y, z = -3.3) {
     const m = this.m;
     const gr = this.group(x, y, z, true);
-    gr.add(mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 40), m.ceramic, 0, 0, 0, { rx: Math.PI / 2 }));
-    gr.add(mesh(new THREE.TorusGeometry(1.2, 0.1, 8, 40), m.brass, 0, 0, 0.1));
+    gr.add(mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 48), m.ceramic, 0, 0, 0, { rx: Math.PI / 2 }));
+    gr.add(mesh(new THREE.TorusGeometry(1.2, 0.1, 8, 48), m.brass, 0, 0, 0.1));
+    gr.add(mesh(new THREE.CircleGeometry(1.1, 48), std({ map: T.clockFace(), roughness: 0.5 }), 0, 0, 0.115, { cast: false }));
     const hh = mesh(bx(0.08, 0.6, 0.04), m.dark, 0, 0.3, 0.14);
     const mh = mesh(bx(0.05, 0.9, 0.04), m.dark, 0, 0.45, 0.16);
     const ph = new THREE.Group(); ph.position.z = 0.0; ph.add(hh); ph.rotation.z = -1.9;
@@ -636,9 +689,10 @@ export class Builder {
   bottle(x, y, z = -2.0, h = 3.4, mat = 'pickle') {
     const m = this.m;
     const gr = this.group(x, y, z, false);
-    gr.add(mesh(lathe([[0, 0], [0.5, 0], [0.55, 0.1], [0.55, h * 0.62], [0.2, h * 0.8], [0.18, h], [0, h]], 20), m.glass, 0, 0, 0, { cast: false }));
-    gr.add(mesh(lathe([[0, 0.05], [0.5, 0.05], [0.5, h * 0.55], [0, h * 0.55]], 20), m[mat]));
-    gr.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.3, 12), m.cork, 0, h + 0.1, 0));
+    gr.add(mesh(lathe([[0, 0], [0.5, 0], [0.55, 0.1], [0.55, h * 0.62], [0.2, h * 0.8], [0.18, h], [0, h]], 24), m.glass, 0, 0, 0, { cast: false }));
+    gr.add(mesh(lathe([[0, 0.05], [0.5, 0.05], [0.5, h * 0.55], [0, h * 0.55]], 24), m[mat]));
+    gr.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.3, 14), m.cork, 0, h + 0.1, 0));
+    gr.add(labelArc(0.55, h * 0.3, BOTTLE[mat === 'honey' ? 'honey' : 'pickle'], h * 0.3, 2.2));
     return gr;
   }
 
@@ -651,7 +705,7 @@ export class Builder {
   photo(x, y, z = -3.35, w = 2.2, h = 1.6) {
     const m = this.m;
     this.add(mesh(rbox(w + 0.3, h + 0.3, 0.12, 0.04), m.woodDark, x, y, z));
-    const img = new THREE.MeshStandardMaterial({ map: T.sky(), roughness: 0.4 });
+    const img = new THREE.MeshStandardMaterial({ map: T.scenePhoto(), roughness: 0.6 });
     this.add(mesh(new THREE.PlaneGeometry(w, h), img, x, y, z + 0.07, { cast: false }));
   }
 

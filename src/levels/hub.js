@@ -59,9 +59,6 @@ function buildLift(L, W) {
   const btnMat = new THREE.MeshBasicMaterial({ color: '#f2cf63' });
   for (const y of [1.68, 1.32]) cabin.add(mesh(new THREE.SphereGeometry(0.07, 10, 8), btnMat, DECK / 2 - 0.45, y, -1.24, { cast: false }));
   cabin.add(mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshBasicMaterial({ color: '#fff1d6' }), 0, 3.38, -0.3, { cast: false }));
-  const cabinLight = new THREE.PointLight('#ffe2b0', 5, 6, 1.6);
-  cabinLight.position.set(0, 3.0, 0.8);
-  cabin.add(cabinLight);
   const mech = L.mech({ id: 'lift', x: SHAFT, y: -0.3, w: DECK, h: 0.3, dx: 0, dy: top, ease: false, oneWay: true, carry: true, mat: 'wood', group: cabin });
   const cable = mesh(new THREE.CylinderGeometry(0.035, 0.035, 1, 6), M.iron, cx, 0, -0.6, { cast: false });
   b.add(cable, true);
@@ -87,7 +84,7 @@ function buildLift(L, W) {
     b.add(dial, true);
     dials.push(needle);
   }
-  return { mech, gates, dials, cable, light: cabinLight, x0: SHAFT, x1: SHAFT + DECK, floors: FLOORS, top, roof: ROOF };
+  return { mech, gates, dials, cable, x0: SHAFT, x1: SHAFT + DECK, floors: FLOORS, top, roof: ROOF };
 }
 
 const ROOMS = {

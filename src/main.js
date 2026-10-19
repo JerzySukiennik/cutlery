@@ -57,13 +57,10 @@ class Game {
     const R = this.renderer;
     R.dof.aperture = def.aperture ?? 1.9;
     R.grade.warmth = def.warmth ?? 0.6;
-    R.sun.intensity = def.sun ?? 3.4;
-    R.sun.color.set(def.sunColor || '#ffd09a');
-    R.fill.intensity = def.fill ?? 0.45;
     R.grade.vignette = def.vignette ?? 0.9;
-    R.hemi.intensity = def.hemi ?? 0.22;
-    R.scene.environmentIntensity = def.env ?? 0.26;
-    if (def.sunDir) R.sunDir.set(...def.sunDir).normalize();
+    R.sunDir.set(...(def.sunDir || [-0.55, 0.62, 0.56])).normalize();
+    R.setLevel(def);
+    R.applyDetail(R.scene);
     R.scene.background.set(def.bg || '#2a1d14');
     this.acc = 0;
     return this.world;
