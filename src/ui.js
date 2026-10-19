@@ -35,6 +35,10 @@ export const GLYPH = {
 
 const NAMES = { fork: 'Fork', knife: 'Knife', butter: 'Butter' };
 const ABOUT = { fork: 'Stabs, climbs and carries.', knife: 'Cuts, and sticks into wood.', butter: 'Hardens, melts and floats.' };
+const COUNT = { 1: 'Just me', 2: 'Two of us', 3: 'Three of us' };
+const STORY = { 1: 'Butter alone, from the fridge', 2: 'Fork and Knife, from the drawer', 3: 'All three, together again' };
+const FLOOR = { 1: 'Ground floor', 2: 'First floor', 3: 'Top floor' };
+const WHO = { 1: 'Alone, you are Butter.', 2: 'Your friend takes the other one on their own device.', 3: 'Each of you takes a different one, each on your own device.' };
 const ALL = new URLSearchParams(location.search).has('all');
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -56,9 +60,15 @@ export class UI {
     try { for (const x of JSON.parse(localStorage.getItem('cutlery.done') || '[]')) this.done.add(legacy[x] || x); } catch (e) {}
     this.nick = '';
     this.kind = '';
-    try { this.nick = localStorage.getItem('cutlery.nick') || ''; this.kind = localStorage.getItem('cutlery.kind') || ''; } catch (e) {}
+    this.players = 0;
+    try { this.nick = localStorage.getItem('cutlery.nick') || ''; this.kind = localStorage.getItem('cutlery.kind') || ''; this.players = +localStorage.getItem('cutlery.players') || 0; } catch (e) {}
     if (!NAMES[this.kind]) this.kind = '';
+    if (!COUNT[this.players]) this.players = 0;
     this.hintT = 0;
+    addEventListener('keydown', (e) => {
+      const free = !document.activeElement || document.activeElement === document.body;
+      if (this.entryKey && free && this.g.state === 'entry' && this.menu.classList.contains('show')) this.entryKey(e);
+    });
   }
 
   progress(p, note) {
@@ -81,21 +91,13 @@ export class UI {
 
   showEntry() {
     const g = this.g;
-    let pick = this.kind || 'butter';
     this.menu.innerHTML = `
       <div class="menu-wrap">
         <header class="brand">
           <h1>Cutlery</h1>
           <p>One house, one day, three of them</p>
         </header>
-        <section class="entry">
-          <p class="eyebrow">Who are you today?</p>
-          <div class="picks">${['fork', 'knife', 'butter'].map((k) => `<button class="pick ${k === pick ? 'mine' : ''}" data-k="${k}"><i class="gl gl-${k}">${GLYPH[k]}</i><b>${NAMES[k]}</b><span>${ABOUT[k]}</span></button>`).join('')}</div>
-          <label class="field"><span>Your name</span><input id="nick" maxlength="20" placeholder="Name" value="${escapeHtml(this.nick)}" autocomplete="off" spellcheck="false"></label>
-          <button class="btn primary" data-act="enter">Enter the house</button>
-          <p class="muted small entry-note">Every floor is one story. Butter's floor is for one player, Fork and Knife's for two, the top floor for all three, each on their own device. Stand on a portal to begin.</p>
-          <p class="house-count" id="houseCount"></p>
-        </section>
+        <section class="entry" id="entry"></section>
         <div class="menu-side" id="side"></div>
         <footer class="menu-foot">
           <button class="link" data-act="settings">Settings</button>
@@ -103,17 +105,63 @@ export class UI {
         </footer>
       </div>`;
     this.show(this.menu);
-    this.houseCount(g.hub ? g.hub.count() : 0);
-    const nick = $('#nick', this.menu);
-    this.menu.querySelectorAll('.pick').forEach((b) => {
-      b.onclick = () => { pick = b.dataset.k; g.audio.ui('ui_toggle'); this.menu.querySelectorAll('.pick').forEach((x) => x.classList.toggle('mine', x === b)); };
-      b.addEventListener('pointerenter', () => g.audio.ui('ui_click'));
-    });
-    const enter = () => { this.setNick(nick.value); this.setKind(pick); g.audio.ui('ui_select'); g.enterHub(pick); };
-    nick.addEventListener('keydown', (e) => { if (e.key === 'Enter') enter(); e.stopPropagation(); });
-    $('[data-act=enter]', this.menu).onclick = enter;
     $('[data-act=settings]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('settings'); };
     $('[data-act=controls]', this.menu).onclick = () => { g.audio.ui('ui_open'); this.side('controls'); };
+    this.entryCount();
+  }
+
+  entryCount() {
+    const g = this.g, host = $('#entry', this.menu);
+    host.innerHTML = `
+      <div class="step">
+        <p class="eyebrow">How many of you are playing?</p>
+        <div class="counts">${TRACKS.map((t) => `<button class="count ${t.players === this.players ? 'mine' : ''}" data-n="${t.players}">
+          <em>${t.players}</em>
+          <span class="count-txt"><b>${COUNT[t.players]}</b><span>${STORY[t.players]}</span></span>
+          <span class="count-gl">${t.chars.map((k) => `<i class="gl gl-${k}">${GLYPH[k]}</i>`).join('')}</span>
+        </button>`).join('')}</div>
+        <p class="muted small entry-note">Each of you plays on your own device. Everyone in the house sees each other.</p>
+        <p class="house-count" id="houseCount"></p>
+      </div>`;
+    this.houseCount(g.hub ? g.hub.count() : 0);
+    const go = (n) => { g.audio.ui('ui_toggle'); this.setPlayers(n); this.entryWho(n); };
+    host.querySelectorAll('.count').forEach((b) => {
+      b.onclick = () => go(+b.dataset.n);
+      b.addEventListener('pointerenter', () => g.audio.ui('ui_click'));
+    });
+    this.entryKey = (e) => { if (COUNT[e.key]) go(+e.key); };
+  }
+
+  entryWho(n) {
+    const g = this.g, host = $('#entry', this.menu);
+    const t = TRACKS.find((x) => x.players === n);
+    let pick = t.chars.includes(this.kind) ? this.kind : t.chars[0];
+    host.innerHTML = `
+      <div class="step">
+        <button class="step-back" data-act="back"><span aria-hidden="true">‹</span> ${COUNT[n]} <i>${FLOOR[n]}</i></button>
+        <p class="eyebrow">${n === 1 ? 'You are' : 'Who are you?'}</p>
+        <div class="picks n${t.chars.length}">${t.chars.map((k) => `<button class="pick ${k === pick ? 'mine' : ''}" data-k="${k}"><i class="gl gl-${k}">${GLYPH[k]}</i><b>${NAMES[k]}</b><span>${ABOUT[k]}</span></button>`).join('')}</div>
+        <p class="muted small entry-note">${WHO[n]}</p>
+        <label class="field"><span>Your name</span><input id="nick" maxlength="20" placeholder="Name" value="${escapeHtml(this.nick)}" autocomplete="off" spellcheck="false"></label>
+        <button class="btn primary" data-act="enter">Enter the house</button>
+        <p class="house-count" id="houseCount"></p>
+      </div>`;
+    this.houseCount(g.hub ? g.hub.count() : 0);
+    const nick = $('#nick', host);
+    host.querySelectorAll('.pick').forEach((b) => {
+      b.onclick = () => { pick = b.dataset.k; g.audio.ui('ui_toggle'); host.querySelectorAll('.pick').forEach((x) => x.classList.toggle('mine', x === b)); };
+      b.addEventListener('pointerenter', () => g.audio.ui('ui_click'));
+    });
+    const enter = () => { this.entryKey = null; this.setNick(nick.value); this.setKind(pick); g.audio.ui('ui_select'); g.enterHub(pick); };
+    nick.addEventListener('keydown', (e) => { if (e.key === 'Enter') enter(); e.stopPropagation(); });
+    $('[data-act=enter]', host).onclick = enter;
+    $('[data-act=back]', host).onclick = () => { g.audio.ui('ui_back'); this.entryCount(); };
+    this.entryKey = (e) => { if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); g.audio.ui('ui_back'); this.entryCount(); } else if (e.key === 'Enter') enter(); };
+  }
+
+  setPlayers(n) {
+    this.players = n;
+    try { localStorage.setItem('cutlery.players', String(n)); } catch (e) {}
   }
 
   houseCount(n) {

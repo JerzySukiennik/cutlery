@@ -97,7 +97,7 @@ class Game {
     if (!this.hub) return;
     this.ui.hideAll();
     this.ui.setKind(kind);
-    this.active = this.hub.spawnLocal(kind, at);
+    this.active = this.hub.spawnLocal(kind, at, this.ui.players);
     this.world.cam.story = null;
     if (at) this.world.updateCamera(1, this.active, true);
     this.state = 'play';

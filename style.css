@@ -86,6 +86,24 @@ kbd { display: inline-block; min-width: 24px; padding: 3px 7px; border-radius: 6
 .pick:hover { transform: translateY(-2px); }
 .pick.mine { border-color: var(--butter); background: rgba(242, 207, 99, 0.1); }
 .pick.mine span { color: var(--butter); }
+.step { display: flex; flex-direction: column; gap: 14px; animation: rise 0.4s cubic-bezier(.2, .8, .2, 1); }
+.counts { display: flex; flex-direction: column; gap: 8px; }
+.count { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 14px; padding: 14px 18px 14px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); text-align: left; transition: transform 0.2s cubic-bezier(.2, .8, .2, 1), border-color 0.2s, background 0.2s; }
+.count:hover { transform: translateX(3px); border-color: rgba(244, 236, 223, 0.28); }
+.count:active { transform: scale(0.985); }
+.count.mine { border-color: rgba(242, 207, 99, 0.55); }
+.count em { font-family: var(--serif); font-style: italic; font-size: 40px; line-height: 1; text-align: center; color: var(--butter); font-variation-settings: 'SOFT' 100, 'opsz' 144; }
+.count-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.count-txt b { font-family: var(--serif); font-weight: 400; font-size: 21px; }
+.count-txt span { font-size: 13px; color: var(--ink-3); }
+.count-gl { display: flex; align-items: center; gap: 6px; }
+.count-gl .gl { width: 14px; height: 26px; }
+.count-gl .gl-butter { width: 24px; }
+.step-back { align-self: flex-start; display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px 6px 10px; margin: 0 0 -2px -2px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); font-size: 14px; transition: color 0.2s, background 0.2s; }
+.step-back:hover { color: var(--ink); background: rgba(244, 236, 223, 0.06); }
+.step-back span { font-size: 17px; line-height: 0; }
+.step-back i { font-style: normal; color: var(--ink-3); font-size: 12px; letter-spacing: 0.04em; }
+.picks.n1 .pick { flex: 0 1 200px; }
 
 #pause { display: grid; place-items: center; background: rgba(18, 12, 8, 0.6); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .pause-wrap { width: min(400px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 16px; align-items: stretch; text-align: center; }

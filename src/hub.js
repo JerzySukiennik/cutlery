@@ -234,9 +234,12 @@ export class Hub {
   count() { let n = this.me ? 1 : 0; for (const r of this.remotes.values()) if (!r.hidden) n++; return n; }
   kinds() { const out = []; for (const r of this.remotes.values()) if (!r.hidden) out.push(r.v.k); return out; }
 
-  spawnLocal(kind, at) {
+  spawnLocal(kind, at, players) {
     const p = at && this.portals.find((q) => q.id === at);
-    const sp = p ? { x: p.x + p.w / 2 + 0.9 + ORDER[kind] * 0.7, y: p.y, face: -1 } : this.w.spawns[kind] || { x: 48, y: 0, face: -1 };
+    const fl = this.w.lift && this.w.lift.floors[players - 1];
+    const sp = p ? { x: p.x + p.w / 2 + 0.9 + ORDER[kind] * 0.7, y: p.y, face: -1 }
+      : fl != null ? { x: 46.4 - ORDER[kind] * 0.6, y: fl, face: -1 }
+      : this.w.spawns[kind] || { x: 48, y: 0, face: -1 };
     this.me = this.w.addChar(kind, { id: 'me', x: sp.x, y: sp.y, face: sp.face || 1 });
     if (p) {
       this.pop = { t: 0 };
