@@ -91,9 +91,9 @@ export default {
     L.cam({ x0: 60, x1: 80, dist: 18, y: 5, lockY: 0.5 });
 
     L.hint({ x: 12, y: 0, w: 4, h: 3, text: 'The table is high. Fork climbs the tablecloth, Knife climbs the wooden chair.', dur: 6 });
-    L.hint({ x: 19, y: 7.4, w: 3, h: 3, text: 'A serving spoon on a napkin ring. One stands on the low end, the other jumps on the high end.', dur: 6 });
-    L.hint({ x: 22.2, y: 13.3, w: 10, h: 3, text: 'The curtain is tied up. Knife can cut the ribbon.', who: 'knife', dur: 5 });
-    L.hint({ x: 26, y: 7.4, w: 7, h: 3, text: 'The curtain is cloth. Fork can climb it.', who: 'fork', when: (W) => !!W.flags.rope_tie, dur: 5 });
+    L.hint({ x: 19, y: 7.4, w: 3, h: 3, text: 'A serving spoon on a napkin ring. One of you stands on the low end, the other jumps on the high end. Physics.', dur: 6 });
+    L.hint({ x: 22.2, y: 13.3, w: 10, h: 3, text: 'The curtain is tied up with a ribbon. Knife can sort that out.', who: 'knife', dur: 5 });
+    L.hint({ x: 26, y: 7.4, w: 7, h: 3, text: 'The curtain is cloth, and Fork can climb cloth.', who: 'fork', when: (W) => !!W.flags.rope_tie, dur: 5 });
     L.hint({ x: 50, y: 13.3, w: 6, h: 3, text: 'The handle is stiff. It needs both of you.', dur: 5 });
   },
 

@@ -85,9 +85,9 @@ export default {
       col: { x: rcx - rampLen / 2, y: rcy - 0.13, w: rampLen, h: 0.26, rot: rampA, mat: 'wood', slope: true },
     });
     b.add(mesh(new THREE.TorusGeometry(0.16, 0.05, 6, 12), M.brass, 19.1, 18.5, -0.4), true);
-    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Butter: jump and press E against the tiles to smear yourself high on the wall.', who: 'butter', dur: 6 });
-    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Tiles are too hard for Fork, but buttered tiles are not. Jump and stab into Butter.', who: 'fork', when: (W) => W.charByKind('butter').state === 'smear', dur: 6 });
-    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Up on the window ledge something is tied with string.', who: 'knife', when: (W) => W.charByKind('fork').state === 'planted', dur: 5 });
+    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Butter, a jump at the tiles and a quick smear will put you high on the wall.|E: smear', who: 'butter', dur: 6 });
+    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Tiles are far too hard for Fork. Buttered tiles, however, are another matter entirely. Stab into the Butter.', who: 'fork', when: (W) => W.charByKind('butter').state === 'smear', dur: 6 });
+    L.hint({ x: 12, y: 9, w: 5.8, h: 3, text: 'Up on the window ledge, something is tied with string. Curious.', who: 'knife', when: (W) => W.charByKind('fork').state === 'planted', dur: 5 });
 
     b.counter(31, 9, 7);
     b.counter(40.3, 9, 11.7);
@@ -95,9 +95,9 @@ export default {
     b.col(38, 7.1, 2.3, 0.3, 'wood');
     b.add(mesh(bx(2.3, 1.7, 0.2), M.cabinetDark, 39.15, 8.15, -2.9, { cast: false }));
     L.box({ id: 'crock', x: 33.4, y: 9, w: 2.0, h: 1.6, weight: 4, mat: 'ceramic', group: crock(L) });
-    L.hint({ x: 31.2, y: 9, w: 2.2, h: 2, text: 'Even together, the crock will not budge on dry stone. Something slippery would help.', dur: 6 });
-    L.hint({ x: 31.2, y: 9, w: 2.2, h: 2, text: 'Smear on the floor, then let Knife spread you thin.', who: 'butter', dur: 5 });
-    L.hint({ x: 31.2, y: 9, w: 3.2, h: 2, text: 'Knife: face the smear and press E to spread it into a slide.', who: 'knife', when: (W) => W.charByKind('butter').state === 'smear', dur: 5 });
+    L.hint({ x: 31.2, y: 9, w: 2.2, h: 2, text: 'Even together, the crock will not budge on dry stone. Something slippery would help. Something yellow, perhaps.', dur: 6 });
+    L.hint({ x: 31.2, y: 9, w: 2.2, h: 2, text: 'Butter, smear yourself on the floor and let Knife spread you thin. It is for a good cause.', who: 'butter', dur: 5 });
+    L.hint({ x: 31.2, y: 9, w: 3.2, h: 2, text: 'Knife, face the smear and spread it into a slide.|E: spread', who: 'knife', when: (W) => W.charByKind('butter').state === 'smear', dur: 5 });
     b.decor(() => { b.canister(32.0, 9, 0.7, 2.2, 'Salt', -2.4); b.bottle(36.4, 9, -2.2, 3.0, 'pickle'); });
 
     const glows = b.stove(42, 9, 6, 2);
@@ -114,13 +114,13 @@ export default {
     bag.position.set(51.4, 9, 0);
     L.cuttable({
       id: 'baguette', x: 50.4, y: 9, w: 1.0, h: 6.6, food: 'bread', hold: true, group: bag,
-      holdHint: 'The baguette rocks away from the blade. Fork has to hold it.',
+      holdHint: 'The baguette rocks away from the blade. Fork will have to hold it.',
       onCut: (W) => {
         W.fallers.push({ group: bag, from: { x: 51.4, y: 9, r: 0 }, to: { x: 51.4, y: 9, r: -Math.PI / 2 }, dur: 1.0, started: true, t0: W.time, done: false, sound: 'woodHeavy', col: { x: 51.4, y: 9, w: 6.6, h: 1.0, mat: 'soft' }, id: 'baguette_l' });
         W.sfx('creak', 51, 12, 0.8);
       },
     });
-    L.hint({ x: 47.8, y: 9, w: 2.6, h: 2.5, text: 'Cut the baguette at the base and it will fall like a tree. Fork holds, Knife cuts.', dur: 6 });
+    L.hint({ x: 47.8, y: 9, w: 2.6, h: 2.5, text: 'Cut the baguette at the base and down it comes, like a very crusty tree. Fork holds, Knife cuts.', dur: 6 });
 
     b.table(57, 9.6, 22, { legH: 9.2 });
     L.kill(52.1, 56.9, 6);

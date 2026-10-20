@@ -5,6 +5,8 @@ import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { UI, nextChapter, trackOf } from './ui.js';
 import { Hub } from './hub.js';
+import { Narrator } from './narrator.js';
+import { HOUSE } from './narration.js';
 import { World } from './world.js';
 import { Story } from './story.js';
 import { Net } from './net.js';
@@ -20,6 +22,7 @@ class Game {
     this.input = new Input();
     this.audio = new Audio();
     this.ui = new UI(this);
+    this.narrator = new Narrator(this);
     this.state = 'loading';
     this.world = null;
     this.story = null;
@@ -50,6 +53,7 @@ class Game {
   }
 
   loadWorld(def, opts) {
+    this.narrator.stop();
     if (this.world) { this.world.dispose(); this.world = null; }
     this.world = new World(this, def, opts);
     this.story = new Story(this, this.world);
@@ -98,6 +102,11 @@ class Game {
     this.ui.hideAll();
     this.ui.setKind(kind);
     this.active = this.hub.spawnLocal(kind, at, this.ui.players);
+    if (!at) {
+      let heard = false;
+      try { heard = !!localStorage.getItem('cutlery.welcomed'); localStorage.setItem('cutlery.welcomed', '1'); } catch (e) {}
+      this.narrator.say(heard ? HOUSE.back[(Math.random() * HOUSE.back.length) | 0] : HOUSE.welcome);
+    }
     this.world.cam.story = null;
     if (at) this.world.updateCamera(1, this.active, true);
     this.state = 'play';

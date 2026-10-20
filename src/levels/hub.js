@@ -316,6 +316,6 @@ export default {
     L.emitter({ type: 'mote', x: 0, y: 0.5, w: 54, h: 19, rate: 6, z0: -2.6, z1: 2 });
     for (const fl of FLOORS) L.cam({ x0: -6, x1: 43, y0: fl - 0.6, y1: fl + FH - 0.6, y: fl + 3.1, lockY: 0.88, dist: 15.5 });
     L.cam({ x0: 42.6, x1: 60, dist: 17.5 });
-    L.hint({ x: 42.4, y: 0, w: 7, h: 3, text: 'Walk up to the lift and it comes. Inside, E goes up and S goes down. Each floor is one story.', dur: 7 });
+    L.hint({ x: 42.4, y: 0, w: 7, h: 3, text: 'This is the lift. Walk up and it comes to you. Each floor of the house holds one story.|E: up · S: down', dur: 7 });
   },
 };

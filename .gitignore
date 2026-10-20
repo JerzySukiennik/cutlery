@@ -6,3 +6,9 @@ Niepotrzebne/sfx/raw/
 Niepotrzebne/sfx/old/
 Niepotrzebne/music/raw/
 __pycache__/
+Niepotrzebne/narration/out-*/
+Niepotrzebne/narration/samples/
+Niepotrzebne/narration/.venv/
+Niepotrzebne/narration/kaggle-lines/lines.py
+Niepotrzebne/narration/*.log
+Niepotrzebne/narration/*.wav

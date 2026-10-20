@@ -349,7 +349,7 @@ export class Character {
       else if (this.melted) { speed *= 0.55; jump = 0; }
       else if (this.soft) jump = 10.6;
       const want = inp.down && !this.melted && this.temp > 0.42 && w.can('squish');
-      if (inp.down && this.grounded && !want && !this.melted && w.can('squish')) w.hint(this, 'cold-squish', 'Too cold to squish. Find something warm.');
+      if (inp.down && this.grounded && !want && !this.melted && w.can('squish')) w.hint(this, 'cold-squish', 'Frozen butter does not squish, however politely you ask. Find somewhere warm.');
       this.setSquish(want || (this.squish && this.blockedAbove(KINDS.butter.hh)));
       if (this.squish) { speed *= 0.62; jump = 0; }
       if (this.melted) this.setMeltShape(true);
@@ -464,7 +464,7 @@ export class Character {
     if (!wat) { this.afloat = false; return; }
     const ty = wat.y - (this.melted ? 0.04 : this.hh * 0.5) + this.hh;
     if (this.pos.y < ty) {
-      if (!this.afloat && this.vel.y < -3) { w.sfx('splash', this.pos.x, wat.y, 0.7); w.effect('splash', this.pos.x, wat.y); }
+      if (!this.afloat && this.vel.y < -3) { w.sfx('splash', this.pos.x, wat.y, 0.7); w.effect('splash', this.pos.x, wat.y); if (this === w.game.active && w.game.narrator) w.game.narrator.event('splash', 0.5, 30); }
       this.afloat = true;
       this.pos.y = ty;
       if (this.vel.y < 0) this.vel.y = 0;
@@ -593,7 +593,7 @@ export class Character {
     this.melted = this.melted ? this.temp > 0.8 : this.temp > 0.93;
     if (!w.can('melt')) this.melted = false;
     if (this.melted !== wasMelted) {
-      if (this.melted) { this.setSquish(false); this.setMeltShape(true); w.sfx('sizzle', this.pos.x, this.pos.y, 0.6); w.effect('steam', this.pos.x, this.pos.y); w.hint(this, 'melted', 'Melted. You can pour through grates now.'); }
+      if (this.melted) { this.setSquish(false); this.setMeltShape(true); w.sfx('sizzle', this.pos.x, this.pos.y, 0.6); w.effect('steam', this.pos.x, this.pos.y); if (w.shown.has('melted') && this === w.game.active && w.game.narrator) w.game.narrator.event('melt', 0.3, 40); w.hint(this, 'melted', 'Butter has melted. Undignified, yes, but a puddle can pour through grates.'); }
       else this.setMeltShape(false);
       if (!this.melted && (this.hh < 0.1)) { this.melted = true; }
     }
@@ -622,7 +622,7 @@ export class Character {
     const hx = this.pos.x + dir * 0.55, hy = this.pos.y + 0.25;
     const target = w.grabbableNear(this, hx, hy, 0.55, 0.85);
     if (target) {
-      if (target.kind === 'butter' && target.hard) { w.sfx('clink', hx, hy, 0.7); w.hint(this, 'hard-butter', 'Butter is frozen solid. It needs to warm up first.'); return; }
+      if (target.kind === 'butter' && target.hard) { w.sfx('clink', hx, hy, 0.7); w.hint(this, 'hard-butter', 'Frozen solid, I am afraid. Nothing gets stuck into that until it warms up.'); return; }
       if (target.kind === 'butter' && !w.can('carryButter')) return;
       this.pickUp(target);
       return;
@@ -639,7 +639,7 @@ export class Character {
     if (hit) {
       w.sfx('clink', hit.x, hit.y, 0.6);
       w.effect('spark', hit.x, hit.y);
-      w.hint(this, 'fork-hard', hit.m.mat === 'wood' ? 'Too hard for a fork. Knife can stick into wood.' : 'Fork only sticks into soft things: bread, cheese, sponge, butter.');
+      w.hint(this, 'fork-hard', hit.m.mat === 'wood' ? 'Fork bounces off wood. Knife, on the other hand, rather enjoys it.' : 'Fork only sticks into soft things. Bread, cheese, sponge. And, occasionally, Butter.');
     } else w.sfx('whoosh', this.pos.x, this.pos.y, 0.25);
   }
 
@@ -666,7 +666,7 @@ export class Character {
       if (hit) {
         w.sfx('clink', hit.x, hit.y, 0.6);
         w.effect('spark', hit.x, hit.y);
-        w.hint(this, 'knife-hard', hit.m.mat === 'soft' ? 'Knife slides out of soft things. It sticks into wood.' : 'Knife only sticks into wood.');
+        w.hint(this, 'knife-hard', hit.m.mat === 'soft' ? 'Knife slides right out of soft things. It prefers wood.' : 'Knife only sticks into wood. A simple knife, with simple tastes.');
         return;
       }
     }
@@ -676,7 +676,7 @@ export class Character {
   butterAction(inp) {
     const w = this.world;
     if (!w.can('smear')) return;
-    if (this.hard) { w.sfx('clink', this.pos.x, this.pos.y, 0.4); w.hint(this, 'hard-smear', 'Too cold to smear.'); return; }
+    if (this.hard) { w.sfx('clink', this.pos.x, this.pos.y, 0.4); w.hint(this, 'hard-smear', 'Far too cold to smear. Butter has standards.'); return; }
     if (this.melted) return;
     const dir = this.face;
     const hit = w.phys.cast(this.pos.x, this.pos.y, dir, 0, this.hw + 0.3, (m) => !m.char && !m.item && !m.box && !m.oneWay && !m.grate);
@@ -689,7 +689,7 @@ export class Character {
       this.syncCol();
       w.sfx('squish', hit.x, hit.y, 0.9);
       w.effect('crumbs', hit.x, hit.y, 'butter');
-      w.hint(this, 'smeared', 'Smeared on the wall. Fork can stick into you now. Jump to pop back.');
+      w.hint(this, 'smeared', 'Butter, smeared on the wall. Fork can stick into that now. A jump pops it back into shape.');
       return;
     }
     if (this.grounded) {
@@ -700,7 +700,7 @@ export class Character {
       this.vel.x = this.vel.y = 0;
       this.syncCol();
       w.sfx('squish', this.pos.x, fy, 0.9);
-      w.hint(this, 'smeared-floor', 'Spread on the floor. Knife can spread you into a long slide.');
+      w.hint(this, 'smeared-floor', 'Spread on the floor. Knife can turn that into a lovely long slide.');
     }
   }
 
@@ -765,7 +765,7 @@ export class Character {
       w.claimItem(target);
       w.sfx('stab', target.pos.x, target.pos.y, 0.6);
     }
-    w.hint(this, 'carry', 'Press action again to throw. Hold down to drop.');
+    w.hint(this, 'carry', 'Fork is carrying something now. Throw it somewhere useful, or put it down gently.|E: throw · S: drop');
   }
 
   heldPos(item, render = false) {
@@ -874,7 +874,7 @@ export class Character {
       this.smear = { kind: 'spread', dir: r.dir, x0: ext.x0, x1: ext.x1, y: this.smear.y, x: (ext.x0 + ext.x1) / 2 };
       this.pos.x = this.smear.x;
       this.syncCol();
-      w.hint(this, 'spread', 'A long slide. Run across it to go fast. Jump to pop back.');
+      w.hint(this, 'spread', 'One long buttery slide. Run across it for speed. Butter can jump to pop back together.');
     }
   }
 

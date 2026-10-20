@@ -1,4 +1,5 @@
 // The house: a public dollhouse where everyone online walks around and stands on portals to start chapters together.
+import { HOUSE, ROOMS } from './narration.js';
 import * as THREE from 'three';
 import { HubLink } from './net.js';
 import { CHAPTERS, TRACKS, chapterOf, trackOf, unlockedIn, GLYPH } from './ui.js';
@@ -401,9 +402,27 @@ export class Hub {
       if (!r.hidden && performance.now() - r.seen > 15000) { r.hidden = true; r.ch.setVisible(false); r.ch.meta.off = true; this.g.ui.houseCount(this.count()); }
     }
     for (const p of this.portals) this.stepPortal(p, dt);
+    this.narrate();
     if (this.me && this.link && this.online) {
       const s = this.me.netState();
       this.link.publish({ k: this.me.kind, n: this.g.ui.nick || NAMES[this.me.kind], d: [...this.g.ui.done].join(','), a: this.suck ? this.suck.p.id : '', l: this.onLift(this.me) ? 1 : 0, x: s.x, y: s.y, vx: s.vx, vy: s.vy, f: s.f, s: s.s, hw: s.hw, hh: s.hh });
+    }
+  }
+
+  narrate() {
+    const N = this.g.narrator, me = this.me;
+    if (!N || !me || this.suck) return;
+    this.said = this.said || new Set();
+    for (const p of this.portals) {
+      const near = Math.abs(me.pos.y - me.hh - p.y) < 1.5 && Math.abs(me.pos.x - (p.x + p.w / 2)) < 3.2;
+      if (!near) continue;
+      const mine = p.slots.some((sl) => sl.occ && sl.occ.ch === me);
+      if (mine && !this.g.ui.unlocked(p.id) && !this.said.has('locked')) { if (N.say(HOUSE.locked, { drop: true })) this.said.add('locked'); continue; }
+      if (this.said.has(p.id)) continue;
+      let first = false;
+      try { first = !localStorage.getItem('cutlery.portalTold'); } catch (e) {}
+      if (first && N.say(HOUSE.portal, { drop: true })) { try { localStorage.setItem('cutlery.portalTold', '1'); } catch (e) {} }
+      if (N.say(ROOMS[p.id], { drop: !first })) this.said.add(p.id);
     }
   }
 

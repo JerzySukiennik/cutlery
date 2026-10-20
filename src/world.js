@@ -709,6 +709,7 @@ export class World {
 
   solve(x, y) {
     this.game.audio.sting();
+    if (this.game.narrator) this.game.narrator.event('solve', 0.35, 35);
     this.fx.emit('sparkle', x, y, 0.5, 26);
     this.fx.ring('ring', x, y - 0.2, 0.4, 20, 4);
     this.shake(0.16);
@@ -753,7 +754,7 @@ export class World {
     this.sfx('poof', ch.pos.x, ch.pos.y, 0.7);
     this.fx.emit('poof', ch.pos.x, ch.pos.y, 0.4);
     if (this.inWater(ch.pos.x, ch.pos.y)) this.fx.emit('splash', ch.pos.x, ch.pos.y, 0.4);
-    if (ch === this.game.active) this.game.ui.flash();
+    if (ch === this.game.active) { this.game.ui.flash(); if (this.game.narrator) this.game.narrator.event('respawn', 0.5, 30); }
   }
 
   killY(x) {
@@ -918,7 +919,7 @@ export class World {
         if (!held) {
           c.wob = 1;
           this.sfx('wobble', c.x + c.w / 2, c.y + c.h / 2, 0.8);
-          this.hint(knife, 'hold-' + c.food, c.holdHint || 'It slips away. Fork has to hold it still while Knife cuts.');
+          this.hint(knife, 'hold-' + c.food, c.holdHint || 'It slips away. Fork needs to hold it still while Knife does the cutting.');
           return true;
         }
       }
@@ -1213,7 +1214,7 @@ export class World {
       if (ok) { t.done = true; t.run(this); }
     }
     const a = this.game.active;
-    if (a) for (const h of this.hints) {
+    if (a && !(this.game.story && this.game.story.running)) for (const h of this.hints) {
       if (h.done) continue;
       if (h.who && h.who !== a.kind) continue;
       if (a.pos.x >= h.x && a.pos.x <= h.x + h.w && a.pos.y >= h.y && a.pos.y <= h.y + h.h) {

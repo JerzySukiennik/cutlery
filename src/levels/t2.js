@@ -38,7 +38,7 @@ export default {
     b.counter(24, 9, 3.5);
     const s2 = sinkBasin(L, 27.5, 5.5, 9, 3.6, { water: 2.4 });
     faucet(L, 30, 9, -2.8);
-    L.toppler({ id: 'soap', x: 25.9, y: 9, w: 1.5, h: 6.2, need: 4, dir: 1, group: (() => { const g = soapBottle(L); g.position.set(27.4, 9, 0); return g; })(), lie: { x: 27.4, y: 9, w: 6.2, h: 1.4 }, mat: 'plastic', sound: 'plateHeavy', hint: 'The soap bottle is heavy. It needs all three of you pushing.' });
+    L.toppler({ id: 'soap', x: 25.9, y: 9, w: 1.5, h: 6.2, need: 4, dir: 1, group: (() => { const g = soapBottle(L); g.position.set(27.4, 9, 0); return g; })(), lie: { x: 27.4, y: 9, w: 6.2, h: 1.4 }, mat: 'plastic', sound: 'plateHeavy', hint: 'The soap bottle is heavy. It will take all three of you.' });
 
     b.counter(33, 9, 27);
     shelfBoard(L, 38, 12, 22, { oneWay: true, d: 3.2, mat: 'woodBoard' });
@@ -67,11 +67,11 @@ export default {
     L.cam({ x0: -6, x1: 34, dist: 20, y: 10.3, lockY: 0.4 });
     L.cam({ x0: 34, x1: 62, dist: 20, y: 12, lockY: 0.4 });
 
-    L.hint({ x: 10, y: 9, w: 4, h: 2, text: 'Butter floats. Jump in, and the others can ride across on top.', who: 'butter', dur: 6 });
-    L.hint({ x: 10, y: 9, w: 4, h: 2, text: 'Fork and Knife sink in water. Ride across on Butter.', who: 'fork', dur: 5 });
-    L.hint({ x: 24.1, y: 8.9, w: 3.4, h: 3, text: 'The soap bottle could reach across the second sink if all three push it over.', dur: 6 });
-    L.hint({ x: 34, y: 8.9, w: 4, h: 3, text: 'The shelf is too high. Fork can carry Butter: stab it, then throw it up.', who: 'fork', dur: 6 });
-    L.hint({ x: 38.2, y: 11.8, w: 3, h: 2, text: 'Push the folded towels off the shelf. They make a step.', who: 'butter', dur: 5 });
+    L.hint({ x: 10, y: 9, w: 4, h: 2, text: 'Butter floats. Jump in, and the others can ride across on top. A raft, of sorts.', who: 'butter', dur: 6 });
+    L.hint({ x: 10, y: 9, w: 4, h: 2, text: 'Fork and Knife sink like, well, cutlery. Ride across on Butter.', who: 'fork', dur: 5 });
+    L.hint({ x: 24.1, y: 8.9, w: 3.4, h: 3, text: 'That soap bottle could reach across the second sink, if all three of you push it over.', dur: 6 });
+    L.hint({ x: 34, y: 8.9, w: 4, h: 3, text: 'The shelf is too high. Fork can carry Butter. Stab it gently, then throw it up.', who: 'fork', dur: 6 });
+    L.hint({ x: 38.2, y: 11.8, w: 3, h: 2, text: 'Push the folded towels off the shelf. They make a perfectly good step.', who: 'butter', dur: 5 });
   },
 
   async intro(S) {

@@ -1,4 +1,5 @@
-// UI: house entry and character pick, pause, HUD, hints, title cards, end cards, fades and touch controls.
+// UI: house entry and character pick, pause, HUD, narrated hints and subtitles, title cards, end cards, fades and touch controls.
+import { OUTRO } from './narration.js';
 export const TRACKS = [
   { id: 'b', name: 'Butter', players: 1, chars: ['butter'], note: 'one player' },
   { id: 'd', name: 'Fork & Knife', players: 2, chars: ['fork', 'knife'], note: 'two players' },
@@ -6,14 +7,14 @@ export const TRACKS = [
 ];
 
 export const CHAPTERS = [
-  { id: 'b1', track: 'b', num: 'I', title: 'Cold Start', sub: 'Butter wakes up alone in the fridge.', end: 'The cutlery drawer was empty. Fork and Knife had already gone looking.' },
-  { id: 'b2', track: 'b', num: 'II', title: 'The Pantry', sub: 'Jars, sacks and a mousetrap.', end: 'Out through the gap under the pantry door.' },
-  { id: 'b3', track: 'b', num: 'III', title: 'The Living Room', sub: 'Over the piano, toward the kitchen.', end: 'There they were, on the kitchen counter.' },
-  { id: 'd1', track: 'd', num: 'I', title: 'The Drawer', sub: 'Fork and Knife climb out to find Butter.', end: 'The butter dish was empty. Butter had gone looking for them.' },
-  { id: 'd2', track: 'd', num: 'II', title: 'The Dining Room', sub: 'Chairs, a tablecloth and a serving spoon.', end: 'No Butter in the dining room either.' },
-  { id: 'd3', track: 'd', num: 'III', title: 'The Study', sub: 'Books, tape and a cork board.', end: 'Back to the kitchen, and someone yellow by the door.' },
-  { id: 't1', track: 't', num: 'I', title: 'Breakfast', sub: 'Together again, before the house wakes.', end: 'Breakfast, together.' },
-  { id: 't2', track: 't', num: 'II', title: 'Washing Up', sub: 'A sink full of water, and Butter floats.', end: 'Everything clean, everyone dry.' },
+  { id: 'b1', track: 'b', num: 'I', title: 'Cold Start', sub: 'Butter wakes up alone in the fridge.', end: 'And the cutlery drawer? Empty. Fork and Knife had already gone looking.' },
+  { id: 'b2', track: 'b', num: 'II', title: 'The Pantry', sub: 'Jars, sacks and a mousetrap.', end: 'And out through the gap under the pantry door. Butter does love a gap.' },
+  { id: 'b3', track: 'b', num: 'III', title: 'The Living Room', sub: 'Over the piano, toward the kitchen.', end: 'And there they were, at last. On the kitchen counter.' },
+  { id: 'd1', track: 'd', num: 'I', title: 'The Drawer', sub: 'Fork and Knife climb out to find Butter.', end: 'The butter dish was empty. Butter, it seems, had gone looking for them.' },
+  { id: 'd2', track: 'd', num: 'II', title: 'The Dining Room', sub: 'Chairs, a tablecloth and a serving spoon.', end: 'No Butter in the dining room either. Onwards.' },
+  { id: 'd3', track: 'd', num: 'III', title: 'The Study', sub: 'Books, tape and a cork board.', end: 'Back to the kitchen, then. And who is that, small and yellow, by the door?' },
+  { id: 't1', track: 't', num: 'I', title: 'Breakfast', sub: 'Together again, before the house wakes.', end: 'Breakfast. Together. Which, after all that, is rather the point.' },
+  { id: 't2', track: 't', num: 'II', title: 'Washing Up', sub: 'A sink full of water, and Butter floats.', end: 'Everything clean. Everyone dry. Well, nearly everyone.' },
   { id: 't3', track: 't', num: 'III', title: 'Goodnight', sub: 'Home through the dark kitchen.', end: 'Goodnight, Fork. Goodnight, Knife. Goodnight, Butter.' },
 ];
 
@@ -187,7 +188,7 @@ export class UI {
     if (kind === 'settings') {
       const a = this.g.audio.vol, q = this.g.renderer.quality;
       el.innerHTML = `<div class="panel"><h2>Settings</h2>
-        ${['master', 'music', 'sfx'].map((k) => `<label class="field range"><span>${k === 'sfx' ? 'Sounds' : k[0].toUpperCase() + k.slice(1)}</span><input type="range" min="0" max="1" step="0.05" value="${a[k]}" data-vol="${k}"></label>`).join('')}
+        ${['master', 'music', 'sfx', 'voice'].map((k) => `<label class="field range"><span>${k === 'sfx' ? 'Sounds' : k === 'voice' ? 'Narrator' : k[0].toUpperCase() + k.slice(1)}</span><input type="range" min="0" max="1" step="0.05" value="${a[k]}" data-vol="${k}"></label>`).join('')}
         <div class="field"><span>Picture</span><div class="seg">${['high', 'low'].map((x) => `<button class="${q === x ? 'on' : ''}" data-q="${x}">${x === 'high' ? 'Sharp' : 'Light'}</button>`).join('')}</div></div>
         <p class="muted small">Light lowers resolution and blur for older laptops and phones.</p></div>`;
       el.querySelectorAll('[data-vol]').forEach((r) => r.oninput = () => this.g.audio.setVol(r.dataset.vol, +r.value));
@@ -283,10 +284,15 @@ export class UI {
   }
 
   hint(text, dur = 4) {
-    const k = this.g.input.lastDevice;
-    let t = text;
-    if (k === 'pad') t = t.replace(/\bE\b/g, 'X').replace(/\bTab\b/g, 'Y');
-    this.hintEl.innerHTML = `<span>${escapeHtml(t)}</span>`;
+    const [say, keys] = String(text).split('|');
+    if (this.g.narrator) this.g.narrator.say(say, { keys, dur });
+    else this.subtitle(say, keys, dur);
+  }
+
+  subtitle(text, keys, dur = 4) {
+    let k = keys || '';
+    if (this.g.input.lastDevice === 'pad') k = k.replace(/\bE\b/g, 'X').replace(/\bTab\b/g, 'Y');
+    this.hintEl.innerHTML = `<span>${escapeHtml(text)}${k ? `<small>${escapeHtml(k)}</small>` : ''}</span>`;
     this.hintEl.classList.add('show');
     clearTimeout(this.hintTimer);
     this.hintTimer = setTimeout(() => this.hintEl.classList.remove('show'), dur * 1000);
@@ -350,6 +356,7 @@ export class UI {
         <button class="btn ${n && lead ? '' : 'primary'}" data-act="house">Back to the house</button>
       </nav></div>`;
     this.show(this.pause);
+    if (g.narrator) { g.narrator.say(c.end, { sub: false }); if (ch === 't3') g.narrator.say(OUTRO, { sub: false }); }
     const leave = () => { this.pause.classList.remove('end-screen'); document.body.classList.remove('ended'); };
     const nb = this.pause.querySelector('[data-act=next]');
     if (nb) nb.onclick = () => { g.audio.ui('ui_select'); leave(); g.afterEnd(next); };

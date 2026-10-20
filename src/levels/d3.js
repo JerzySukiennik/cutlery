@@ -59,7 +59,7 @@ export default {
     rIn.position.set(-0.2, 3.3, 0);
     ruler.add(rIn);
     ruler.position.set(48.0, 12.2, 0);
-    L.toppler({ id: 'ruler', x: 47.6, y: 12.2, w: 0.4, h: 6.6, need: 3, dir: 1, group: ruler, lie: { x: 48.0, y: 12.2, w: 6.6, h: 0.25 }, hint: 'The ruler leans but will not fall. Push together.' });
+    L.toppler({ id: 'ruler', x: 47.6, y: 12.2, w: 0.4, h: 6.6, need: 3, dir: 1, group: ruler, lie: { x: 48.0, y: 12.2, w: 6.6, h: 0.25 }, hint: 'The ruler leans, but will not fall. Not for one of you, anyway. Push together.' });
 
     b.add(mesh(rbox(16, 0.45, 3.2, 0.06), M.stone, 62.2, 11.98, -0.8));
     b.col(54.4, 0, 16, 12.2, 'plaster');
@@ -90,9 +90,9 @@ export default {
     L.cam({ x0: 38, x1: 56, dist: 20, y: 12, lockY: 0.4 });
     L.cam({ x0: 56, x1: 72, dist: 17, y: 14.5, lockY: 0.4 });
 
-    L.hint({ x: 3, y: 0, w: 4, h: 3, text: 'Fork can climb the wicker basket. Knife can stick into the desk and become a springboard.', dur: 6 });
-    L.hint({ x: 24, y: 7.4, w: 3, h: 3, text: 'The dictionary would fill the gap by the shelf. It is heavy.', dur: 5 });
-    L.hint({ x: 38.6, y: 7.4, w: 2.4, h: 3, text: 'Jump on the stapler.', dur: 4 });
+    L.hint({ x: 3, y: 0, w: 4, h: 3, text: 'Fork can climb the wicker basket. Knife can stick into the desk and become a rather springy diving board.', dur: 6 });
+    L.hint({ x: 24, y: 7.4, w: 3, h: 3, text: 'That dictionary would fill the gap by the shelf nicely. It is heavy, of course. Dictionaries usually are.', dur: 5 });
+    L.hint({ x: 38.6, y: 7.4, w: 2.4, h: 3, text: 'Jump on the stapler. Trust me.', dur: 4 });
   },
 
   async intro(S) {

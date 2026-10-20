@@ -105,7 +105,7 @@ export default {
     iceCubes(L, 34.0, 38.0, 9);
     L.heat({ x: 33.4, y: 9, w: 6.4, h: 2.2, rate: -0.3, fx: 'frost', z0: -1.2, z1: 1.2 });
     L.box({ id: 'sponge', x: 38.2, y: 9, w: 1.4, h: 0.8, weight: 2, mat: 'soft', floats: true, group: b.make(() => b.sponge(38.2, 9, 1.4, 0.8)) });
-    L.hint({ x: 36.4, y: 9, w: 2.0, h: 2, text: 'The sponge is soaked and heavy. Only frozen-solid Butter could shove it.', when: (W) => !W.charByKind('butter').hard });
+    L.hint({ x: 36.4, y: 9, w: 2.0, h: 2, text: 'The sponge is soaked and terribly heavy. Only a frozen-solid Butter could shove it.', when: (W) => !W.charByKind('butter').hard });
 
     b.towel(47.5, 8.6, 1.9, 1.8, 2.6);
     b.decor(() => { b.saltPepper(46.2, 9, -1.8); b.kettle(48.6, 9, 1.0, -1.6); b.plant(50.6, 9, -2.6, 0.7); });
@@ -133,12 +133,12 @@ export default {
     L.cam({ x0: 36, x1: 46, dist: 19.5 });
     L.cam({ x0: 50, x1: 60, dist: 18.5, y: 8.6, lockY: 0.4 });
 
-    L.hint({ x: 6, y: 12.8, w: 3, h: 2, text: 'A and D to walk. W or Space to jump.' });
-    L.hint({ x: 2.6, y: 9, w: 3.5, h: 2, text: 'Frozen Butter is heavy enough to push the jar. Walk into it.' });
-    L.hint({ x: 9.5, y: 11.3, w: 1.6, h: 1.4, text: 'The light is warm. Wait until you soften, then hold S to squish through the gap.', when: (W) => W.charByKind('butter').temp < 0.42 });
-    L.hint({ x: 11.6, y: 9, w: 1.3, h: 1.5, text: 'Soft in the sun, Butter sticks to walls. Jump into a wall and hold toward it, then jump again.', dur: 6, when: (W) => W.time > 2 });
-    L.hint({ x: 19.5, y: 9, w: 1.5, h: 1.5, text: 'Hop into the toaster slot.' });
-    L.hint({ x: 31, y: 15.6, w: 2.4, h: 1.5, text: 'Melted butter seeps through grates.', when: (W) => !W.charByKind('butter').melted });
+    L.hint({ x: 6, y: 12.8, w: 3, h: 2, text: 'Hello, Butter. Shall we go for a little walk?|A D: walk · W or Space: jump' });
+    L.hint({ x: 2.6, y: 9, w: 3.5, h: 2, text: 'Frozen Butter is heavy enough to push that jar. Just walk into it. Firmly.' });
+    L.hint({ x: 9.5, y: 11.3, w: 1.6, h: 1.4, text: 'The light is warm. Wait until you soften, then squish through the gap.|hold S: squish', when: (W) => W.charByKind('butter').temp < 0.42 });
+    L.hint({ x: 11.6, y: 9, w: 1.3, h: 1.5, text: 'Soft in the sun, Butter sticks to walls. Jump at a wall, hold towards it, then jump again. Climbing, the butter way.', dur: 6, when: (W) => W.time > 2 });
+    L.hint({ x: 19.5, y: 9, w: 1.5, h: 1.5, text: 'Hop into the toaster slot. What could possibly go wrong?' });
+    L.hint({ x: 31, y: 15.6, w: 2.4, h: 1.5, text: 'Melted butter seeps through grates. Very little stops a determined puddle.', when: (W) => !W.charByKind('butter').melted });
 
     L.update((W, dt) => {
       const on = W.flags.bulb ? 1 : 0;

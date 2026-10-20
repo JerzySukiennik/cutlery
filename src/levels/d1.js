@@ -54,9 +54,9 @@ export default {
     slotTray(L, 0.4, 6.1, 6.2);
     b.add(mesh(bx(9, 0.4, 7), M.woodTable, 3.5, 5.6, -0.5, { cast: false }));
     b.add(mesh(bx(9, 9, 6), M.cabinetDark, -1.5, 1.3, -0.6, { cast: false }));
-    L.hint({ x: 0, y: 5.8, w: 7, h: 3, text: 'Fork and Knife are two players, or one player switching with Tab.', who: 'fork', dur: 5 });
-    L.hint({ x: 3.4, y: 5.8, w: 3.4, h: 3, text: 'Knife sticks into wood. Face the drawer wall and press E.', who: 'knife', dur: 5.5 });
-    L.hint({ x: 3.4, y: 5.8, w: 3.4, h: 3, text: 'A planted Knife is springy. Land on it holding jump to fly.', who: 'fork', when: (W) => W.charByKind('knife').state === 'planted', dur: 5 });
+    L.hint({ x: 0, y: 5.8, w: 7, h: 3, text: 'Fork and Knife. Two friends, two players. Or one player, switching between them.|Tab: switch', who: 'fork', dur: 5 });
+    L.hint({ x: 3.4, y: 5.8, w: 3.4, h: 3, text: 'Knife sticks into wood. Face the drawer wall and stick in.|E: stick in', who: 'knife', dur: 5.5 });
+    L.hint({ x: 3.4, y: 5.8, w: 3.4, h: 3, text: 'A planted Knife is springy. Land on it holding jump, and off you fly.', who: 'fork', when: (W) => W.charByKind('knife').state === 'planted', dur: 5 });
 
     b.counter(7, 9, 13);
     b.counter(25, 9, 20);
@@ -69,12 +69,12 @@ export default {
       b.saltPepper(8.2, 9, -1.9);
     });
     b.bread(11, 9, 3, 2.6);
-    L.hint({ x: 8.6, y: 9, w: 2.4, h: 2, text: 'Fork sticks into soft things like bread. Press E facing it, then jump to climb.', who: 'fork' });
-    L.hint({ x: 8.6, y: 9, w: 2.4, h: 2, text: 'A Fork stuck in the bread makes a step for Knife.', who: 'knife', when: (W) => W.charByKind('fork').state === 'planted' });
+    L.hint({ x: 8.6, y: 9, w: 2.4, h: 2, text: 'Fork sticks into soft things, like bread. Stick in, then jump to climb.|E: stab', who: 'fork' });
+    L.hint({ x: 8.6, y: 9, w: 2.4, h: 2, text: 'A Fork stuck in the bread makes a very handy step for Knife.', who: 'knife', when: (W) => W.charByKind('fork').state === 'planted' });
 
     L.item({ id: 'g1', kind: 'grape', x: 15.6, y: 9 });
     L.item({ id: 'g2', kind: 'grape', x: 16.1, y: 9 });
-    L.hint({ x: 15, y: 9, w: 2, h: 2, text: 'Fork can pick things up on its tines. E again to throw.', who: 'fork' });
+    L.hint({ x: 15, y: 9, w: 2, h: 2, text: 'Fork can carry things on its tines. Do try to throw them somewhere useful.|E: pick up · E again: throw', who: 'fork' });
 
     const sink = b.sink(20, 9, 5);
     L.water(20.15, 24.85, sink.waterY - 0.05);
@@ -83,8 +83,8 @@ export default {
     b.add(mesh(new THREE.TorusGeometry(0.16, 0.05, 6, 12), M.brass, 19.3, 17.45, -0.2), true);
     const pin = rollingPin(L);
     L.faller({ id: 'pin', group: pin, from: { x: 19.75, y: 9, r: 0 }, to: { x: 19.75, y: 9, r: -Math.PI / 2 }, dur: 0.9, colBefore: { x: 18.85, y: 9, w: 0.9, h: 5.7, mat: 'wood' }, col: { x: 19.75, y: 9, w: 5.65, h: 0.84, mat: 'wood' }, when: (W) => !!W.flags.rope_r1, sound: 'woodHeavy', bounce: true });
-    L.hint({ x: 16.5, y: 9, w: 2.3, h: 2, text: 'A string holds the rolling pin up. Knife can stick into the pin, jump off it, and cut the string in the air.', who: 'knife', dur: 6 });
-    L.hint({ x: 16.5, y: 9, w: 2.3, h: 2, text: 'Knife can stand on your head to reach higher.', who: 'fork', dur: 5 });
+    L.hint({ x: 16.5, y: 9, w: 2.3, h: 2, text: 'A string holds the rolling pin up. Knife can stick into the pin, jump off, and cut the string in mid-air. Very dashing.', who: 'knife', dur: 6 });
+    L.hint({ x: 16.5, y: 9, w: 2.3, h: 2, text: 'Knife can stand on Fork\'s head to reach higher. Fork will not mind. Probably.', who: 'fork', dur: 5 });
 
     b.decor(() => { b.bottle(26.4, 9, -2.2, 3.2, 'pickle'); b.canister(28.6, 9, 0.7, 2.0, 'Rice', -2.4); }, 0);
     wallShelf(L, 27.6, 13.9, 6.4, { oneWay: false });
@@ -98,7 +98,7 @@ export default {
     b.add(topG, true);
     L.cuttable({
       id: 'cheese', x: 29.6, y: 9, w: 2.4, h: 4.6, food: 'cheese', hold: true, group: cheeseG,
-      holdHint: 'The cheese wobbles away. Fork has to stick into it and hold it still.',
+      holdHint: 'The cheese wobbles off in protest. Fork, hold it still, would you?',
       after: { x: 29.6, y: 9, w: 2.4, h: 1.6 },
       onCut: (W, c) => {
         cheeseG.scale.y = 1.6 / 4.6;
@@ -109,7 +109,7 @@ export default {
       },
     });
     L.update((W, dt) => { if (topG.visible && topG.userData.zOut) topG.position.z = Math.min(4, topG.position.z + dt * 7); });
-    L.hint({ x: 26.8, y: 9, w: 2.6, h: 2, text: 'Too tall to climb, nothing to climb over. Hold it with Fork, cut it with Knife.', dur: 6 });
+    L.hint({ x: 26.8, y: 9, w: 2.6, h: 2, text: 'Too tall to climb, and nothing to climb over. Hold it with Fork, cut it with Knife.', dur: 6 });
 
     L.box({ id: 'flour', x: 38.2, y: 9, w: 1.6, h: 1.2, weight: 3, mat: 'cloth', group: flourBag(L) });
     L.hint({ x: 36.2, y: 9, w: 2.2, h: 2, text: 'The flour is too heavy for one. Push it together.', dur: 5 });

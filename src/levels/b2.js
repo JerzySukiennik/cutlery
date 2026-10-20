@@ -77,8 +77,8 @@ export default {
     for (let i = 0; i < 10; i++) b.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), peas, 42.3 + (i % 5) * 0.4, 6.35 + Math.floor(i / 5) * 0.2, -1.4 + (i % 3) * 0.3));
     L.heat({ x: 39, y: 6, w: 9.6, h: 2.6, rate: -0.34, fx: 'frost', z0: -1.4, z1: 1.2 });
     L.box({ id: 'can', x: 46.6, y: 6, w: 1.1, h: 1.25, weight: 2, mat: 'metal', group: tinCan(L, 1.1, 1.25, '#3f6e8c', 'Beans') });
-    L.hint({ x: 44.2, y: 6, w: 2.4, h: 2, text: 'Frozen Butter is heavy. Shove the can over to make a step.', when: (W) => W.charByKind('butter').hard });
-    L.hint({ x: 44.2, y: 6, w: 2.4, h: 2, text: 'Too soft to shift a full can. The frozen peas would help.', when: (W) => !W.charByKind('butter').hard });
+    L.hint({ x: 44.2, y: 6, w: 2.4, h: 2, text: 'Frozen Butter is heavy. Shove the can over and make yourself a step.', when: (W) => W.charByKind('butter').hard });
+    L.hint({ x: 44.2, y: 6, w: 2.4, h: 2, text: 'Too soft to shift a full can. A spell in the frozen peas would help.', when: (W) => !W.charByKind('butter').hard });
     crate(L, 52, 6, 6, 2);
     onions(L, 49, 6, -1.6);
 
@@ -122,11 +122,11 @@ export default {
     L.cam({ x0: 52, x1: 76, dist: 19, y: 11, lockY: 0.35 });
     L.cam({ x0: 76, x1: 90, dist: 16, y: 5, lockY: 0.5 });
 
-    L.hint({ x: 1, y: 7, w: 4, h: 2, text: 'The pipe is warm. Soft butter slides fast downhill, fast enough to fly.', dur: 6 });
-    L.hint({ x: 22, y: 4.4, w: 3, h: 2, text: 'Step on the mousetrap. Hold jump to fly higher.', dur: 5 });
-    L.hint({ x: 31.5, y: 10.2, w: 4, h: 2, text: 'Under the bulb Butter melts. Melted butter pours through a strainer.', dur: 6 });
+    L.hint({ x: 1, y: 7, w: 4, h: 2, text: 'The pipe is warm. Soft butter slides downhill rather quickly. Quickly enough to fly, in fact.', dur: 6 });
+    L.hint({ x: 22, y: 4.4, w: 3, h: 2, text: 'Step on the mousetrap. Yes, on purpose. Hold jump to fly higher.', dur: 5 });
+    L.hint({ x: 31.5, y: 10.2, w: 4, h: 2, text: 'Under the bulb, Butter melts. And melted butter pours straight through a strainer.', dur: 6 });
     L.hint({ x: 55, y: 8, w: 4, h: 2, text: 'Soft butter clings between the basket and the box. Jump from wall to wall.', when: (W) => W.charByKind('butter').soft, dur: 6 });
-    L.hint({ x: 75, y: 2, w: 3, h: 2, text: 'Hold S to squish under the door.', dur: 5 });
+    L.hint({ x: 75, y: 2, w: 3, h: 2, text: 'Squish under the door. Butter has always been good at leaving quietly.|hold S: squish', dur: 5 });
 
     L.update((W) => { lamp.light.intensity = 17 + Math.sin(W.time * 23) * 0.4; });
   },

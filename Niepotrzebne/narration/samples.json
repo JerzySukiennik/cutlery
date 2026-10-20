@@ -1,0 +1,36 @@
+{
+ "style": "You are the narrator of a cosy handmade video game: a warm, wry British storyteller with gentle comic timing and a smile in the voice, unhurried. Speak only the user text, exactly as written.",
+ "gap": 10,
+ "items": [
+  {
+   "voice": "Gacrux",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Gacrux.mp3"
+  },
+  {
+   "voice": "Algenib",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Algenib.mp3"
+  },
+  {
+   "voice": "Sadaltager",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Sadaltager.mp3"
+  },
+  {
+   "voice": "Charon",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Charon.mp3"
+  },
+  {
+   "voice": "Sulafat",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Sulafat.mp3"
+  },
+  {
+   "voice": "Achird",
+   "text": "Ah, the fridge. Cold, quiet, and, as of this morning, home to one very determined little block of butter. Now, butter is not known for its climbing. But then, nobody told the butter that.",
+   "out": "samples/Achird.mp3"
+  }
+ ]
+}

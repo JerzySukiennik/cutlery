@@ -1,4 +1,5 @@
 // Story: skippable scripted scenes that move the camera and puppeteer local characters.
+import { INTRO } from './narration.js';
 export class Story {
   constructor(game, world) {
     this.g = game;
@@ -87,7 +88,11 @@ export class Story {
     if (c && c.state === 'script') { c.state = 'walk'; c.script = null; }
   }
 
-  title(main, sub, dur) { if (!this.skipping) this.g.ui.title(main, sub, dur); }
+  title(main, sub, dur) {
+    if (this.skipping) return;
+    this.g.ui.title(main, sub, dur);
+    if (this.g.narrator && INTRO[this.g.chapter] && main !== 'Cutlery') this.g.narrator.say(INTRO[this.g.chapter], { first: true });
+  }
   sfx(name, vol = 1) { this.g.audio.sfx(name, vol, 0); }
   music(theme) { this.g.audio.startMusic(theme); }
   intensity(v) { this.g.audio.setIntensity(v); }

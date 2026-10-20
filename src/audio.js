@@ -92,7 +92,7 @@ export class Audio {
     this.ctx = null;
     this.buffers = {};
     this.piano = [];
-    this.vol = { master: 0.9, music: 0.55, sfx: 0.9 };
+    this.vol = { master: 0.9, music: 0.55, sfx: 0.9, voice: 1 };
     this.started = false;
     this.music = null;
     this.intensity = 0.7;
@@ -118,6 +118,8 @@ export class Audio {
     this.reverb.connect(this.revGain).connect(this.master);
     this.sfxRev = c.createGain(); this.sfxRev.gain.value = 0.12; this.sfxRev.connect(this.reverb);
     this.recBus = c.createGain(); this.recBus.gain.value = this.vol.music; this.recBus.connect(this.master);
+    this.voiceBus = c.createGain(); this.voiceBus.gain.value = this.vol.voice ?? 1; this.voiceBus.connect(this.master);
+    this.ducked = false;
     this.decks = [this.deck(), this.deck()];
     const names = new Set(Object.values(FILES).flat());
     let done = 0;
@@ -211,7 +213,8 @@ export class Audio {
   setVol(k, v) {
     this.vol[k] = v;
     if (k === 'master' && this.master) this.master.gain.value = v;
-    if (k === 'music' && this.musicBus) { this.musicBus.gain.value = v; this.recBus.gain.value = v; }
+    if (k === 'music' && this.musicBus) { this.musicBus.gain.value = v; this.recBus.gain.value = v * (this.ducked ? 0.4 : 1); }
+    if (k === 'voice' && this.voiceBus) this.voiceBus.gain.value = v;
     if (k === 'sfx' && this.sfxBus) this.sfxBus.gain.value = v;
     try { localStorage.setItem('cutlery.vol', JSON.stringify(this.vol)); } catch (e) {}
   }
@@ -251,6 +254,22 @@ export class Audio {
   }
 
   ui(name) { this.sfx(name, 0.55, 0); }
+
+  voice(buf) {
+    const c = this.ctx, s = c.createBufferSource();
+    s.buffer = buf;
+    s.connect(this.voiceBus);
+    s.start();
+    return s;
+  }
+
+  duck(on) {
+    if (!this.ctx || this.ducked === on) return;
+    this.ducked = on;
+    const t = this.ctx.currentTime, v = this.vol.music * (on ? 0.4 : 1);
+    this.recBus.gain.cancelScheduledValues(t);
+    this.recBus.gain.setTargetAtTime(v, t, on ? 0.12 : 0.6);
+  }
 
   sting() {
     if (!this.ctx || this.ctx.state !== 'running') return;

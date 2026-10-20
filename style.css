@@ -143,7 +143,9 @@ body.ended #hud, body.ended #touch { opacity: 0; visibility: hidden; }
 
 #hint { position: absolute; left: 50%; bottom: calc(46px + var(--safe-b)); transform: translateX(-50%) translateY(8px); opacity: 0; transition: opacity 0.45s, transform 0.45s cubic-bezier(.2, .8, .2, 1); max-width: min(560px, calc(100vw - 32px)); text-align: center; }
 #hint.show { opacity: 1; transform: translateX(-50%); }
-#hint span { display: inline-block; padding: 11px 18px; border-radius: 14px; background: rgba(20, 13, 8, 0.58); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 15px; line-height: 1.45; color: var(--ink); border: 1px solid var(--line); }
+#hint span { display: inline-block; padding: 11px 18px; border-radius: 14px; background: rgba(20, 13, 8, 0.58); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-family: var(--serif); font-style: italic; font-size: 17px; line-height: 1.42; text-wrap: balance; color: var(--ink); border: 1px solid var(--line); }
+#hint small { display: block; margin-top: 6px; font-family: var(--sans); font-style: normal; font-size: 12px; letter-spacing: 0.06em; color: var(--ink-2); }
+body.touch #hint small { display: none; }
 body.playing.touch #hint { bottom: calc(150px + var(--safe-b)); }
 
 #card { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; }

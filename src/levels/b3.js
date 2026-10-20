@@ -70,7 +70,7 @@ export default {
     b.add(mesh(bx(0.5, 16, 1.2), M.woodDark, 79.2, 10.2, -0.4));
     b.decor(() => b.counter(86, 11.2, 14, { floor: 2.2, front: -1.0, back: -5.0 }));
     for (const [k, x] of [['fork', 91.2], ['knife', 92.4]]) { const f = makeFigure(k, 1); f.position.set(x, 11.2, -3.2); f.rotation.y = -0.3; b.add(f, true); }
-    L.hint({ x: 70, y: 0, w: 2.4, h: 2, text: 'The hallway is cold. Frozen Butter can shove the boot to the step.', when: (W) => W.charByKind('butter').hard, dur: 5 });
+    L.hint({ x: 70, y: 0, w: 2.4, h: 2, text: 'The hallway is cold. Frozen Butter can shove that boot over to the step.', when: (W) => W.charByKind('butter').hard, dur: 5 });
 
     L.spawn('butter', 1.6, 0, 1, 0.55);
     L.checkpoint({ x: -20, spawns: { butter: { x: 1.6, y: 0, face: 1, temp: 0.55 } } });
@@ -87,11 +87,11 @@ export default {
     L.cam({ x0: 60, x1: 80, dist: 17, y: 4, lockY: 0.5 });
     L.cam({ x0: 80, x1: 100, dist: 18, y: 6.5, lockY: 0.4 });
 
-    L.hint({ x: 3, y: 0, w: 3, h: 2, text: 'Hop up the books to the piano bench.', dur: 4 });
-    L.hint({ x: 18.6, y: 6.4, w: 3, h: 2, text: 'The keys play as you walk. The sun at the far end softens you.', dur: 5 });
-    L.hint({ x: 27, y: 6.4, w: 4, h: 2, text: 'Soft butter clings. Climb between the piano and the bookshelf.', when: (W) => W.charByKind('butter').soft, dur: 6 });
-    L.hint({ x: 44, y: 3, w: 6, h: 5, text: 'Hold jump when you land on a cushion to bounce high.', dur: 5 });
-    L.hint({ x: 58.4, y: 0, w: 2, h: 2, text: 'The radiator melts you. Melted butter pours through the vent.', dur: 6 });
+    L.hint({ x: 3, y: 0, w: 3, h: 2, text: 'Hop up the books to the piano bench. Mind the dust.', dur: 4 });
+    L.hint({ x: 18.6, y: 6.4, w: 3, h: 2, text: 'The keys play as you walk. Have a little tune. The sun at the far end will soften you up.', dur: 5 });
+    L.hint({ x: 27, y: 6.4, w: 4, h: 2, text: 'Soft butter clings. Climb up between the piano and the bookshelf.', when: (W) => W.charByKind('butter').soft, dur: 6 });
+    L.hint({ x: 44, y: 3, w: 6, h: 5, text: 'Hold jump as you land on a cushion and you will bounce ever so high.', dur: 5 });
+    L.hint({ x: 58.4, y: 0, w: 2, h: 2, text: 'The radiator will melt you, and melted butter pours through the vent. Every cloud.', dur: 6 });
   },
 
   async intro(S) {

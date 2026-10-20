@@ -103,12 +103,12 @@ export default {
     L.cam({ x0: 32, x1: 46, dist: 20, y: 13, lockY: 0.4 });
     L.cam({ x0: 46, x1: 64, dist: 17, y: 9, lockY: 0.45 });
 
-    L.hint({ x: 4, y: 8.8, w: 5, h: 3, text: 'At night Butter freezes solid, and frozen Butter is strong. The pot needs all three of you.', dur: 6 });
-    L.hint({ x: 17, y: 8.8, w: 3, h: 3, text: 'The stove is still warm. A soft Butter can smear itself on the tiles.', who: 'butter', dur: 6 });
-    L.hint({ x: 24, y: 8.8, w: 5, h: 3, text: 'Smear high on the tiles, stab into the butter, and make a step for Knife.', dur: 6 });
-    L.hint({ x: 30.2, y: 13.4, w: 3, h: 3, text: 'An oven mitt hangs by a loop.', who: 'knife', dur: 5 });
+    L.hint({ x: 4, y: 8.8, w: 5, h: 3, text: 'At night, Butter freezes solid, and frozen Butter is strong. Even so, the pot needs all three of you.', dur: 6 });
+    L.hint({ x: 17, y: 8.8, w: 3, h: 3, text: 'The stove is still warm. A softened Butter can smear itself on the tiles.', who: 'butter', dur: 6 });
+    L.hint({ x: 24, y: 8.8, w: 5, h: 3, text: 'Smear high on the tiles, stab into the butter, and make a step for Knife. Teamwork, of a sort.', dur: 6 });
+    L.hint({ x: 30.2, y: 13.4, w: 3, h: 3, text: 'An oven mitt, hanging by a loop. One snip and it is down.', who: 'knife', dur: 5 });
     L.hint({ x: 24, y: 8.8, w: 5, h: 3, text: 'Fork climbs the mitt. Soft Butter can climb between the mitt and the tiles.', when: (W) => !!W.flags.rope_loop, dur: 6 });
-    L.hint({ x: 46, y: 8.8, w: 4, h: 3, text: 'Home. Fork and Knife in the drawer, Butter on its dish.', dur: 6 });
+    L.hint({ x: 46, y: 8.8, w: 4, h: 3, text: 'Home at last. Fork and Knife in the drawer, Butter on its dish.', dur: 6 });
 
     L.update((W, dt) => {
       const on = W.flags.end ? 1 : 0;
