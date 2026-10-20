@@ -25,7 +25,7 @@ def transcribe(fn):
     return ' '.join(r.stdout.split())
 
 def render(src, dst):
-    af = 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,afade=t=in:d=0.02,areverse,afade=t=in:d=0.005,loudnorm=I=-16:TP=-1.5'
+    af = 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,afade=t=in:d=0.02,areverse,afade=t=in:d=0.005,loudnorm=I=-16:TP=-1.5'
     subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', src, '-af', af, '-ar', '44100', '-ac', '1', '-c:a', 'libmp3lame', '-q:a', '5', dst], check=True)
 
 if __name__ == '__main__':
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         if st:
             src = os.path.join(HERE, '_low.wav')
             lower(best, src, st, formant)
-        af = 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,afade=t=in:d=0.02,areverse,afade=t=in:d=0.005,loudnorm=I=-16:TP=-1.5'
+        af = 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,afade=t=in:d=0.02,areverse,afade=t=in:d=0.005,loudnorm=I=-16:TP=-1.5'
         subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', src, '-af', af, '-ar', '44100', '-ac', '1', '-c:a', 'libmp3lame', '-q:a', '5', os.path.join(OUT, l['file'])], check=True)
         mapping[l['text']] = l['file']
         print(f"{w:.2f} {l['file']} {l['text'][:60]}", flush=True)
