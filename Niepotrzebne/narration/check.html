@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Cutlery narrator review: the lines whisper heard least clearly, with both takes. -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrator do sprawdzenia</title>
+<style>
+:root { --bg: #17140f; --card: #211d17; --ink: #efe6d6; --mute: #9a8f7e; --line: #332d24; --acc: #d89040; --acc-ink: #1b150d; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+.sub { color: var(--mute); margin: 0 0 22px; }
+.r { padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; }
+.t { font-family: Georgia, serif; font-style: italic; font-size: 17px; margin: 0 0 8px; }
+.h { font-size: 13px; color: var(--mute); margin: 2px 0; }
+.h b { color: var(--ink); font-weight: 500; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+button { font: inherit; border: 0; border-radius: 9px; padding: 7px 13px; cursor: pointer; background: #3a3229; color: var(--ink); }
+button.game { background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Narrator: kwestie do sprawdzenia</h1>
+  <p class="sub">Kwestie, w których Whisper usłyszał coś innego niż tekst, od najgorszej. Pomarańczowy przycisk to wersja, która jest w grze. Jeśli któraś brzmi źle, podaj numer, a podmienię ją na drugie podejście albo wygeneruję od nowa.</p>
+  <div id="list"></div>
+</main>
+<script>
+const D = [{"file": "cfd666472aa0.mp3", "text": "Marvellous.", "take": 0, "heard": ["Marvelous.", "Marvelous."], "wer": [1.0, 1.0]}, {"file": "275126add4c3.mp3", "text": "Goodnight, Fork. Goodnight, Knife. Goodnight, Butter.", "take": 0, "heard": ["Good night, Fork. Good night, Knife. Good night, Butter.", "Good night, Fork. Good night, Knife. Good night, Butter."], "wer": [1.0, 1.0]}, {"file": "a8439c55c21d.mp3", "text": "Goodnight. The last story of the day.", "take": 0, "heard": ["Good night, the last story of the day.", "Good night. The last story of the day."], "wer": [0.29, 0.29]}, {"file": "1edb29544391.mp3", "text": "Step on the mousetrap. Yes, on purpose. Hold jump to fly higher.", "take": 0, "heard": ["Step on the mouse trap, yes on purpose. Hold jump to fly higher.", "Step on the mouse trap. Yes, on purpose. Hold jump to fly higher."], "wer": [0.17, 0.17]}, {"file": "ec8ceec1dc6c.mp3", "text": "The flour is too heavy for one. Push it together.", "take": 0, "heard": ["The flower is too heavy for one. Push it together.", "The flower is too heavy for one. Push it together."], "wer": [0.1, 0.1]}, {"file": "fe3f49d616ba.mp3", "text": "Even together, the crock will not budge on dry stone. Something slippery would help. Something yellow, perhaps.", "take": 0, "heard": ["Even together, the croc will not budge on dry stone. Something slippery would help. Something yellow, perhaps?", "Even together, the croc will not budge on dry stone. Something slippery would help, something yellow, perhaps."], "wer": [0.06, 0.06]}, {"file": "73a1dd152235.mp3", "text": "Knife can stand on Fork's head to reach higher. Fork will not mind. Probably.", "take": 1, "heard": ["Knife can stand on forks head to reach higher. Fork will not mind, probably.", "Knife can stand on Fork's head to reach higher. Fork will not mind, probably."], "wer": [0.07, 0.0]}, {"file": "5b4c3c972513.mp3", "text": "Fork and Knife sink like, well, cutlery. Ride across on Butter.", "take": 1, "heard": ["Fork a knife sink like, well, cutlery. Ride across on butter.", "Fork and knife sink-like. Well, cutlery. Ride across on butter."], "wer": [0.09, 0.0]}];
+let cur = null;
+const play = (b, src) => {
+  if (cur) { cur.a.pause(); cur.b.classList.remove('on'); if (cur.b === b) { cur = null; return; } }
+  const a = new Audio(src); a.play(); b.classList.add('on');
+  a.onended = () => { b.classList.remove('on'); cur = null; };
+  cur = { a, b };
+};
+D.forEach((r, i) => {
+  const el = document.createElement('div'); el.className = 'r';
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  el.innerHTML = `<p class="t">${i + 1}. ${esc(r.text)}</p>` + r.heard.map((h, t) => r.wer[t] === null ? '' : `<p class="h">Podejście ${t + 1}${t === r.take ? ' (w grze)' : ''}, błąd ${Math.round(r.wer[t] * 100)}%: <b>${esc(h || '(cisza)')}</b></p>`).join('') + '<div class="btns"></div>';
+  const btns = el.querySelector('.btns');
+  [['W grze', '../../assets/voice/' + r.file, 'game'], ['Podejście 1', 'out-lines/' + r.file.replace('.mp3', '_0.wav'), ''], ['Podejście 2', 'out-lines/' + r.file.replace('.mp3', '_1.wav'), '']].forEach(([l, src, c]) => {
+    const b = document.createElement('button'); b.textContent = l; b.className = c; b.onclick = () => play(b, src); btns.append(b);
+  });
+  document.getElementById('list').append(el);
+});
+</script>
+</body>
+</html>
