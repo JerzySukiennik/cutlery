@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- Cutlery sound board: every game sound event, new recordings next to the old Kenney/synth versions. -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cutlery dźwięki</title>
+<style>
+:root { --bg: #f4efe6; --card: #fffaf2; --ink: #2a241c; --mute: #8a7f70; --line: #e4dccd; --acc: #b8742a; --acc-ink: #fff; --old: #e9e2d6; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #17140f; --card: #211d17; --ink: #efe6d6; --mute: #9a8f7e; --line: #332d24; --acc: #d89040; --acc-ink: #1b150d; --old: #2d2820; } }
+:root[data-theme="dark"] { --bg: #17140f; --card: #211d17; --ink: #efe6d6; --mute: #9a8f7e; --line: #332d24; --acc: #d89040; --acc-ink: #1b150d; --old: #2d2820; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 28px 16px 80px; }
+h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--mute); margin: 0 0 22px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mute); margin: 30px 0 10px; }
+.row { display: grid; grid-template-columns: minmax(140px, 220px) auto 200px minmax(0, 1fr); gap: 10px 14px; align-items: center; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 6px; }
+.name b { display: block; font-weight: 600; }
+.name code { font: 12px ui-monospace, Menlo, monospace; color: var(--mute); }
+.btns { display: flex; gap: 4px; }
+.takes { flex-wrap: wrap; }
+button { font: inherit; border: 0; border-radius: 8px; padding: 6px 11px; cursor: pointer; background: var(--old); color: var(--ink); transition: transform .08s, filter .15s; }
+button:active { transform: scale(0.94); }
+button.new { background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+button.take { background: transparent; border: 1px solid var(--line); padding: 5px 0; width: 34px; }
+button.on { outline: 2px solid var(--acc); outline-offset: 1px; }
+button:disabled { opacity: .35; cursor: default; }
+.src { font-size: 12px; color: var(--mute); overflow: hidden; }
+.src a, .note a { color: inherit; }
+.note span { display: block; }
+.src span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.amb { display: flex; gap: 8px; flex-wrap: wrap; }
+.note { font-size: 13px; color: var(--mute); margin-top: 8px; }
+#gate { position: fixed; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 88%, transparent); z-index: 5; }
+#gate button { font-size: 17px; padding: 14px 26px; }
+@media (max-width: 680px) { .row { grid-template-columns: 1fr auto; } .src { grid-column: 1 / -1; } .takes { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<div id="gate"><button class="new" id="start">Włącz dźwięk</button></div>
+<main>
+  <h1>Cutlery: dźwięki</h1>
+  <p class="sub">Pomarańczowy przycisk gra efekt dokładnie tak, jak w grze (losowe ujęcie i wysokość). Numery to pojedyncze ujęcia. Szary to stara wersja (Kenney albo synteza). Wszystkie nowe nagrania z freesound.org, licencja CC0.</p>
+  <h2>Tło</h2>
+  <div class="row" style="grid-template-columns: 1fr">
+    <div class="amb" id="ambNew"></div>
+    <div class="amb" id="ambOld"></div>
+    <div class="note" id="ambSrc"></div>
+  </div>
+  <h2>Muzyka</h2>
+  <div class="row" style="grid-template-columns: 1fr">
+    <div class="amb" id="musNew"></div>
+    <div class="amb" id="musOld"></div>
+    <div class="note">Przełączanie między utworami to to samo przejście co w grze (wyciszenie starego, wejście nowego).</div>
+  </div>
+  <div id="list"></div>
+</main>
+<script type="module">
+const realFetch = window.fetch.bind(window);
+const { Audio: NewAudio } = await import('../../src/audio.js');
+const { Audio: OldAudio } = await import('./old/audio-old.js');
+const data = await (await realFetch('board-data.json')).json();
+
+const GROUPS = [
+  ['Postacie', [
+    ['squishSoft', 'Kroki masła'], ['squish', 'Masło ląduje, ściska się'], ['metalTick', 'Kroki widelca i noża'], ['metal', 'Widelec lub nóż ląduje na metalu'],
+    ['wood', 'Lądowanie na drewnie'], ['soft', 'Lądowanie na miękkim'], ['plate', 'Lądowanie na porcelanie i szkle'], ['crack', 'Zamarznięte masło pęka'],
+    ['drip', 'Roztopione masło kapie'], ['sizzle', 'Masło się topi'], ['poof', 'Odrodzenie'],
+  ]],
+  ['Narzędzia', [
+    ['stab', 'Widelec się wbija'], ['unstab', 'Widelec się wyciąga'], ['draw', 'Nóż się wyciąga'], ['slice', 'Nóż kroi jedzenie'], ['cut', 'Przecięty sznurek', 'slice'],
+    ['spread', 'Nóż rozsmarowuje masło'], ['wobble', 'Jedzenie się wymyka, gdy widelec nie trzyma'], ['twang', 'Nóż jako sprężysta półka'], ['whoosh', 'Chybienie, winda, portal'], ['swish', 'Zamach nożem'],
+  ]],
+  ['Świat', [
+    ['clink', 'Brzęk sztućców i płytek'], ['drag', 'Pchanie skrzynki'], ['plateSoft', 'Pchanie szkła i porcelany'], ['plateHeavy', 'Ciężkie talerze'], ['woodHeavy', 'Ciężkie drewniane rzeczy spadają'],
+    ['thunk', 'Głuche uderzenie'], ['cloth', 'Materiał: ścierka, rękawica'], ['door', 'Drzwi szafki'], ['creak', 'Skrzypienie: winda, deski'], ['latch', 'Zatrzask'],
+    ['snap', 'Pułapka na myszy'], ['boing', 'Sprężyna w domu'], ['splash', 'Plusk w wodzie'], ['toast', 'Wciśnięcie dźwigni tostera', 'latch'], ['tick', 'Toster tyka'],
+    ['pop', 'Toster wyrzuca, wyjście z portalu'], ['ding', 'Dzwonek windy, toster gotowy'], ['chime', 'Portal (fortepian, bez zmian)'],
+  ]],
+  ['Menu', [
+    ['ui_click', 'Klik'], ['ui_select', 'Wybór'], ['ui_toggle', 'Przełącznik'], ['ui_open', 'Otwarcie panelu'], ['ui_close', 'Zamknięcie panelu'], ['ui_back', 'Wstecz'],
+  ]],
+];
+
+const A = new NewAudio(), O = new OldAudio();
+A.vol.sfx = O.vol.sfx = 0.9;
+const ready = Promise.all([A.init(), O.init()]);
+document.getElementById('start').onclick = async () => {
+  document.getElementById('start').textContent = 'Ładowanie…';
+  await ready;
+  await A.ctx.resume(); await O.ctx.resume();
+  document.getElementById('gate').remove();
+};
+
+const el = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const list = document.getElementById('list');
+const credit = (s) => `<span><a href="https://freesound.org/s/${s.id}/" target="_blank" rel="noopener">${s.t}</a> · ${s.u}</span>`;
+
+for (const [title, rows] of GROUPS) {
+  list.append(el('h2', '', title));
+  for (const [key, pl, oldKey] of rows) {
+    const r = el('div', 'row');
+    const nm = el('div', 'name'); nm.append(el('b', '', pl), el('code', '', key));
+    const main = el('div', 'btns');
+    const bn = el('button', 'new', 'Nowy'); bn.onclick = () => A.sfx(key, 1, 0);
+    const bo = el('button', '', 'Stary'); bo.onclick = () => O.sfx(oldKey || key, 1, 0);
+    main.append(bn, bo);
+    const takes = el('div', 'btns takes');
+    const files = data[key] || [];
+    files.forEach((s, i) => { const b = el('button', 'take', String(i + 1)); b.title = s.f; b.onclick = () => A.play(A.buffers[s.f], 0.8, 0, 1); takes.append(b); });
+    const src = el('div', 'src');
+    const seen = new Set();
+    src.innerHTML = files.filter((s) => !seen.has(s.id) && seen.add(s.id)).map(credit).join('');
+    if (key === 'chime') { src.textContent = 'Nuty z fortepianu gry'; bo.disabled = true; }
+    r.append(nm, main, takes, src);
+    list.append(r);
+  }
+}
+
+const MUS = [['menu', 'Dom'], ['ch1', 'Lodówka'], ['pantry', 'Spiżarnia'], ['living', 'Salon'], ['ch2', 'Szuflada'], ['dining', 'Jadalnia'], ['study', 'Gabinet'], ['ch3', 'Śniadanie'], ['washing', 'Zmywanie'], ['night', 'Dobranoc']];
+const musNew = document.getElementById('musNew'), musOld = document.getElementById('musOld');
+const mbtn = [];
+const mstop = () => { mbtn.forEach((b) => b.classList.remove('on')); A.stopMusic(); O.stopMusic(); };
+for (const [k, pl] of MUS) {
+  const b = el('button', 'new', pl); b.onclick = () => { const on = b.classList.contains('on'); O.stopMusic(); mbtn.forEach((x) => x.classList.remove('on')); if (on) { A.stopMusic(); return; } A.startMusic(k); b.classList.add('on'); };
+  musNew.append(b); mbtn.push(b);
+  const o = el('button', '', pl + ' (stara)'); o.onclick = () => { const on = o.classList.contains('on'); A.stopMusic(); mbtn.forEach((x) => x.classList.remove('on')); if (on) { O.stopMusic(); return; } O.stopMusic(); O.startMusic(k); o.classList.add('on'); };
+  musOld.append(o); mbtn.push(o);
+}
+
+const KINDS = [['kitchen', 'Kuchnia'], ['fridge', 'Lodówka'], ['quiet', 'Dom, spiżarnia'], ['night', 'Noc (Goodnight)']];
+const ambNew = document.getElementById('ambNew'), ambOld = document.getElementById('ambOld');
+const all = [];
+const stop = () => {
+  all.forEach((b) => b.classList.remove('on'));
+  if (A.layers) { for (const L of Object.values(A.layers)) L.g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.2); A.ambKind = null; }
+  if (O.layers) O.ambienceMix('quiet');
+};
+for (const [k, pl] of KINDS) {
+  const b = el('button', 'new', pl); b.onclick = () => { const on = b.classList.contains('on'); stop(); if (!on) { A.ambience(k); b.classList.add('on'); } };
+  ambNew.append(b); all.push(b);
+}
+for (const [k, pl] of KINDS.slice(0, 2)) {
+  const b = el('button', '', pl + ' (stara)'); b.onclick = () => { const on = b.classList.contains('on'); stop(); if (!on) { O.ambience(k); b.classList.add('on'); } };
+  ambOld.append(b); all.push(b);
+}
+const seenA = new Set();
+document.getElementById('ambSrc').innerHTML = ['amb_birds', 'amb_room', 'amb_fridge', 'amb_night'].map((f) => data[f][0]).filter((s) => !seenA.has(s.id) && seenA.add(s.id)).map(credit).join('');
+</script>
+</body>
+</html>

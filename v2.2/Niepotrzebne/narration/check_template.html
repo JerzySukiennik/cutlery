@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Cutlery narrator review: the lines whisper heard least clearly, with both takes. -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrator do sprawdzenia</title>
+<style>
+:root { --bg: #17140f; --card: #211d17; --ink: #efe6d6; --mute: #9a8f7e; --line: #332d24; --acc: #d89040; --acc-ink: #1b150d; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+.sub { color: var(--mute); margin: 0 0 22px; }
+.r { padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; }
+.t { font-family: Georgia, serif; font-style: italic; font-size: 17px; margin: 0 0 8px; }
+.h { font-size: 13px; color: var(--mute); margin: 2px 0; }
+.h b { color: var(--ink); font-weight: 500; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+button { font: inherit; border: 0; border-radius: 9px; padding: 7px 13px; cursor: pointer; background: #3a3229; color: var(--ink); }
+button.game { background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Narrator: kwestie do sprawdzenia</h1>
+  <p class="sub">Kwestie, w których Whisper usłyszał coś innego niż tekst, od najgorszej. Pomarańczowy przycisk to wersja, która jest w grze. Jeśli któraś brzmi źle, podaj numer, a podmienię ją na drugie podejście albo wygeneruję od nowa.</p>
+  <div id="list"></div>
+</main>
+<script>
+const D = __DATA__;
+let cur = null;
+const play = (b, src) => {
+  if (cur) { cur.a.pause(); cur.b.classList.remove('on'); if (cur.b === b) { cur = null; return; } }
+  const a = new Audio(src); a.play(); b.classList.add('on');
+  a.onended = () => { b.classList.remove('on'); cur = null; };
+  cur = { a, b };
+};
+D.forEach((r, i) => {
+  const el = document.createElement('div'); el.className = 'r';
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  el.innerHTML = `<p class="t">${i + 1}. ${esc(r.text)}</p>` + r.heard.map((h, t) => r.wer[t] === null ? '' : `<p class="h">Podejście ${t + 1}${t === r.take ? ' (w grze)' : ''}, błąd ${Math.round(r.wer[t] * 100)}%: <b>${esc(h || '(cisza)')}</b></p>`).join('') + '<div class="btns"></div>';
+  const btns = el.querySelector('.btns');
+  [['W grze', '../../assets/voice/' + r.file, 'game'], ['Podejście 1', 'out-lines/' + r.file.replace('.mp3', '_0.wav'), ''], ['Podejście 2', 'out-lines/' + r.file.replace('.mp3', '_1.wav'), '']].forEach(([l, src, c]) => {
+    const b = document.createElement('button'); b.textContent = l; b.className = c; b.onclick = () => play(b, src); btns.append(b);
+  });
+  document.getElementById('list').append(el);
+});
+</script>
+</body>
+</html>

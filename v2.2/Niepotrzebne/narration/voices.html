@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- Cutlery narrator voice picker: six designed voices, two takes each, same line. -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrator Cutlery</title>
+<style>
+:root { --bg: #17140f; --card: #211d17; --ink: #efe6d6; --mute: #9a8f7e; --line: #332d24; --acc: #d89040; --acc-ink: #1b150d; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+.sub { color: var(--mute); margin: 0 0 22px; }
+blockquote { margin: 0 0 22px; padding: 14px 18px; border-left: 3px solid var(--acc); background: var(--card); border-radius: 0 12px 12px 0; font-family: Georgia, serif; font-style: italic; font-size: 17px; }
+.v { display: grid; grid-template-columns: 34px 1fr auto; gap: 6px 14px; align-items: center; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; }
+.v b { font-size: 17px; }
+.v p { grid-column: 2 / -1; margin: 0; font-size: 13px; color: var(--mute); }
+.n { font: 600 22px Georgia, serif; color: var(--acc); text-align: center; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; }
+button { font: inherit; border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+.v.low { border-color: var(--acc); margin-bottom: 22px; }
+button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 560px) { .v { grid-template-columns: 28px 1fr; } .btns { grid-column: 2; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Narrator: wybierz głos</h1>
+  <p class="sub">Sześć głosów zaprojektowanych z opisu (Qwen3-TTS), po dwa podejścia tej samej kwestii. Wybrany głos zostanie sklonowany na wszystkie 127 kwestii w grze.</p>
+  <blockquote id="text"></blockquote>
+  <div class="v low"><span class="n">N</span><b>Naturalnie nisko</b><span class="btns" id="low"></span><p>Głos zaprojektowany od razu jako niski, bez obróbki. A: głęboki bas-baryton (opis 1a, tylko niżej). B: jeszcze niższy, aksamitny bas jak lektor audiobooka. Po trzy podejścia. Hz to zmierzona średnia wysokość: naprawdę niżej od 1a wyszły tylko B1 i B3.</p></div>
+  <div id="list"></div>
+</main>
+<script>
+const NAMES = { storyteller: 'Gawędziarz', cheeky: 'Zadziorny', grandad: 'Dziadek przy kominku', aunt: 'Ciocia (kobieta)', butler: 'Kamerdyner', scot: 'Szkot' };
+let cur = null;
+const play = (b, src) => {
+  if (cur) { cur.a.pause(); cur.b.classList.remove('on'); if (cur.b === b) { cur = null; return; } }
+  const a = new Audio(src);
+  a.play(); b.classList.add('on');
+  a.onended = () => { b.classList.remove('on'); cur = null; };
+  cur = { a, b };
+};
+[['1a · 107 Hz', 'samples/q_storyteller_0.mp3'], ['B1 · 91 Hz', 'samples/q_deeper_0.mp3'], ['B3 · 93 Hz', 'samples/q_deeper_2.mp3'], ['B2 · 119 Hz', 'samples/q_deeper_1.mp3'], ['A1 · 107 Hz', 'samples/q_deep_0.mp3'], ['A2 · 114 Hz', 'samples/q_deep_1.mp3'], ['A3 · 112 Hz', 'samples/q_deep_2.mp3']].forEach(([t, src]) => {
+  const b = document.createElement('button'); b.textContent = t; b.onclick = () => play(b, src); document.getElementById('low').append(b);
+});
+fetch('samples/voices.json').then((r) => r.json()).then((d) => {
+  document.getElementById('text').textContent = d.text;
+  const list = document.getElementById('list');
+  Object.entries(d.voices).forEach(([k, desc], i) => {
+    const row = document.createElement('div');
+    row.className = 'v';
+    row.innerHTML = `<span class="n">${i + 1}</span><b>${NAMES[k] || k}</b><span class="btns"></span><p>${desc}</p>`;
+    const btns = row.querySelector('.btns');
+    [0, 1].forEach((t) => {
+      const b = document.createElement('button');
+      b.textContent = `${i + 1}${'ab'[t]}`;
+      b.onclick = () => {
+        if (cur) { cur.a.pause(); cur.b.classList.remove('on'); if (cur.b === b) { cur = null; return; } }
+        const a = new Audio(`samples/q_${k}_${t}.mp3`);
+        a.play(); b.classList.add('on');
+        a.onended = () => { b.classList.remove('on'); cur = null; };
+        cur = { a, b };
+      };
+      btns.append(b);
+    });
+    list.append(row);
+  });
+});
+</script>
+</body>
+</html>
